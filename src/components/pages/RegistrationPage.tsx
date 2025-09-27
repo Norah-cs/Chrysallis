@@ -5,7 +5,6 @@ import { FormData } from '../../types';
 import { TECH_OPTIONS, PRACTICE_GOALS, YEAR_OPTIONS, BUTTERFLY_THEMES } from '../../constants';
 import { ButterflySVG } from '../shared/ButterflySVG';
 import { ProgressIndicator } from '../shared/ProgressIndicator';
-import { Footer } from '../Footer/Footer';
 
 interface RegistrationPageProps {
   onBack: () => void;
@@ -518,7 +517,6 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
           </div>
         </form>
       </div>
-      <Footer/>
     </div>
   );
 };
