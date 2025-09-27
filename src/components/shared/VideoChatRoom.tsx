@@ -91,8 +91,10 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       setMatchedUser(matchedUserData);
       setIsWaitingForMatch(false);
       
-      // Start WebRTC connection with the matched user
-      initiatePeerConnection(matchedUserData.id);
+      // Start WebRTC connection with the matched user (with delay to ensure local stream is ready)
+      setTimeout(() => {
+        initiatePeerConnection(matchedUserData.id);
+      }, 500);
     });
 
     newSocket.on('user-left', (userId) => {
@@ -186,10 +188,15 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       ]
     });
 
+    // Add local stream tracks if available
     if (localStream) {
+      console.log('📹 Adding local stream tracks to peer connection');
       localStream.getTracks().forEach(track => {
+        console.log(`Adding track: ${track.kind} (enabled: ${track.enabled})`);
         peerConnection.addTrack(track, localStream);
       });
+    } else {
+      console.log('⚠️ Local stream not available when creating peer connection');
     }
 
     peerConnection.ontrack = (event) => {
@@ -224,6 +231,15 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
   const initiatePeerConnection = async (userId: string) => {
     console.log('🔗 Initiating peer connection with:', userId);
     
+    // Check if local stream is available
+    if (!localStream) {
+      console.log('⚠️ Local stream not available, waiting...');
+      setTimeout(() => {
+        initiatePeerConnection(userId);
+      }, 1000);
+      return;
+    }
+    
     const peerConnection = createPeerConnection(userId);
     peerConnections.current[userId] = peerConnection;
 
@@ -246,6 +262,16 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
   const handleOffer = async (userId: string, offer: RTCSessionDescriptionInit) => {
     console.log('📥 Received offer from:', userId);
+    
+    // Check if local stream is available
+    if (!localStream) {
+      console.log('⚠️ Local stream not available when handling offer, waiting...');
+      setTimeout(() => {
+        handleOffer(userId, offer);
+      }, 1000);
+      return;
+    }
+    
     const peerConnection = createPeerConnection(userId);
     peerConnections.current[userId] = peerConnection;
 

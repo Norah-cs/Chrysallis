@@ -106,6 +106,11 @@ io.on('connection', (socket) => {
       setTimeout(async () => {
         await findMatch(userId, roomId);
       }, 100); // Small delay to ensure socket connection is stable
+      
+      // Also try to match existing waiting users with this new user
+      setTimeout(async () => {
+        await matchExistingUsers(roomId);
+      }, 200); // Slightly longer delay to ensure new user is fully processed
     } catch (error) {
       console.error('❌ Error joining room:', error);
       socket.emit('error', { message: 'Failed to join room' });
@@ -279,6 +284,121 @@ async function getUserFromWaitingList(socketId) {
     console.error('Error fetching user from waiting list:', error);
     return null;
   }
+}
+
+// Function to match existing waiting users when a new user joins
+async function matchExistingUsers(roomId) {
+  try {
+    console.log(`\n🔄 CHECKING FOR EXISTING MATCHES IN ROOM ${roomId}`);
+    
+    const db = await connectToDB();
+    const waitingUsers = db.collection("waitingUsers");
+    
+    // Get all waiting users in this room
+    const users = await waitingUsers.find({ roomId, status: 'waiting' }).toArray();
+    console.log(`📊 Found ${users.length} waiting users in room ${roomId}`);
+    
+    if (users.length < 2) {
+      console.log(`❌ Not enough users to match (need at least 2)`);
+      return;
+    }
+    
+    // Try to find the best match among all waiting users
+    let bestMatch = null;
+    let bestScore = 0;
+    let bestUser1 = null;
+    let bestUser2 = null;
+    
+    for (let i = 0; i < users.length; i++) {
+      for (let j = i + 1; j < users.length; j++) {
+        const user1 = users[i];
+        const user2 = users[j];
+        
+        // Calculate compatibility score
+        const score = calculateCompatibilityScore(user1, user2);
+        console.log(`   ${user1.name} ↔ ${user2.name}: ${score} points`);
+        
+        if (score > bestScore && score > 20) { // Minimum compatibility threshold
+          bestScore = score;
+          bestUser1 = user1;
+          bestUser2 = user2;
+        }
+      }
+    }
+    
+    if (bestUser1 && bestUser2) {
+      console.log(`🏆 Best match found: ${bestUser1.name} ↔ ${bestUser2.name} (${bestScore} points)`);
+      
+      // Create matched room
+      await createMatchedRoom(bestUser1, bestUser2);
+      console.log(`✅ Matched room created in database`);
+      
+      // Remove both users from waiting list
+      await removeUserFromWaitingList(bestUser1.socketId);
+      await removeUserFromWaitingList(bestUser2.socketId);
+      console.log(`✅ Both users removed from waiting list`);
+      
+      // Notify both users
+      console.log(`📡 Sending match notifications...`);
+      
+      // Notify user1 about user2
+      io.to(bestUser1.socketId).emit('user-matched', {
+        id: bestUser2.socketId,
+        name: bestUser2.name,
+        techInterest: bestUser2.techInterest,
+        practiceGoals: bestUser2.practiceGoals,
+        university: bestUser2.university,
+        year: bestUser2.year
+      });
+      console.log(`✅ Match notification sent to ${bestUser1.name} (${bestUser1.socketId})`);
+      
+      // Notify user2 about user1
+      io.to(bestUser2.socketId).emit('user-matched', {
+        id: bestUser1.socketId,
+        name: bestUser1.name,
+        techInterest: bestUser1.techInterest,
+        practiceGoals: bestUser1.practiceGoals,
+        university: bestUser1.university,
+        year: bestUser1.year
+      });
+      console.log(`✅ Match notification sent to ${bestUser2.name} (${bestUser2.socketId})`);
+      
+      console.log(`✅ Match notifications sent to both users`);
+    } else {
+      console.log(`❌ No compatible matches found among existing users`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error in matchExistingUsers:', error);
+  }
+}
+
+// Helper function to calculate compatibility score
+function calculateCompatibilityScore(user1, user2) {
+  let score = 0;
+  
+  // Tech interest match (40 points)
+  if (user1.techInterest === user2.techInterest) {
+    score += 40;
+  }
+  
+  // Practice goals overlap (30 points max)
+  const goals1 = user1.practiceGoals || [];
+  const goals2 = user2.practiceGoals || [];
+  const commonGoals = goals1.filter(goal => goals2.includes(goal));
+  score += commonGoals.length * 10;
+  
+  // University match (20 points)
+  if (user1.university === user2.university) {
+    score += 20;
+  }
+  
+  // Year match (10 points)
+  if (user1.year === user2.year) {
+    score += 10;
+  }
+  
+  return score;
 }
 
 // Helper function to connect to database
