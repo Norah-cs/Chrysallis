@@ -1,6 +1,10 @@
 import React from 'react';
+import { Sparkles, Users, Target, Award, ChevronRight, Store } from 'lucide-react';
+// Update the import path to match the actual location and filename of LogoLoop
+import LogoLoop from "../LogoLoop/LogoLoop";
+import TiltedCard from "../Logo/Logo";
+import { StoreImages } from "../LogoLoop/StoreImages";
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Users, Target, Award, ChevronRight } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -36,19 +40,29 @@ export const HomePage: React.FC = () => {
         <div className="absolute top-40 left-1/2 transform -translate-x-1/2 w-60 h-60 bg-support2 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-pulse animation-delay-4000"></div>
       </div>
 
-    <div className="relative z-10 container mx-auto px-6 py-12">
+    <div className="relative z-10 w-full px-6 py-12">
       {/* Header */}
       <header className="text-center mb-16">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-primary to-secondary rounded-full mb-8 shadow-lg">
-          <span className="text-4xl">🦋</span>
+        <div className="inline-flex items-center justify-center w-32 h-32 mb-8">
+            <TiltedCard
+                imageSrc="/assets/chrysallis-logo.png" // put your butterfly image path here
+                altText="Butterfly"
+                containerHeight="128px"
+                containerWidth="128px"
+                imageHeight="135px"
+                imageWidth="135px"
+                scaleOnHover={1.55} 
+                rotateAmplitude={35}
+                showMobileWarning={false}
+                showTooltip={false}
+            />
         </div>
-        <h1 className="text-6xl font-extrabold bg-gradient-to-r from-primary via-secondary to-accent2 bg-clip-text text-transparent mb-6 leading-tight">
+
+        <h1 className="text-6xl font-extrabold bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent mb-6 leading-tight">
           Welcome to Chrysallis
         </h1>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
-          Transform your tech career journey with personalized practice sessions, expert feedback, 
-          and a supportive community of peers. From coding interviews to career conversations, 
-          we help you emerge as a confident professional.
+          Every butterfly starts as a chrysalis — start your journey here.  
         </p>
         <button
           onClick={() => navigate('/register')}
@@ -58,6 +72,11 @@ export const HomePage: React.FC = () => {
           <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
         </button>
       </header>
+
+      {/* Logo Loop Section */}
+        <div className="my-16">
+            <LogoLoop logos={StoreImages} ariaLabel="Origami designs" />
+        </div>
 
       {/* Features Grid */}
       <section className="mb-16">
@@ -111,7 +130,7 @@ export const HomePage: React.FC = () => {
         {/* Features Grid */}
         <section className="mb-16">
           <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
-            How Chrysalis Helps You Grow
+            The wings of your future are built in practice.
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
