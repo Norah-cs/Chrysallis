@@ -5,7 +5,7 @@ import { FormData } from "../../types";
 function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
-    name: "Alex Johnson",
+    name: profileData.name,
     email: "alex.johnson@student.edu",
     phone: "+1 (555) 123-4567",
     location: "San Francisco, CA",
