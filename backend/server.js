@@ -2,12 +2,13 @@ import express from "express";
 import cors from "cors";
 import bcrypt from "bcrypt";
 import { insertNewUser } from "./insertUser.js"; // MongoDB insertion function
+import { generateQuestionAudio } from "./interviewQuestion.js";
 
 const app = express();
 app.use(cors());
-app.use(express.json()); // parses JSON body
+app.use(express.json());
 
-// This is the route your React form hits
+// Register a new user
 app.post("/api/register", async (req, res) => {
   try {
     const result = await insertNewUser(req.body); // req.body is your formData
@@ -22,6 +23,7 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
+// User login
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -45,5 +47,16 @@ app.post("/api/login", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// Generate interview question
+app.post("/api/genq", async (req, res) => {
+  try {
+    await generateQuestion();
+  } catch (error) {
+    console.error(error);
+  }
+});
+
+
 
 app.listen(5000, () => console.log("Server running on port 5000"));
