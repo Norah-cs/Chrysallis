@@ -51,9 +51,12 @@ app.post("/api/login", async (req, res) => {
 // Generate interview question
 app.post("/api/genq", async (req, res) => {
   try {
-    await generateQuestion();
+    const result = await generateQuestionAudio();
+    // send the result back to the client
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
     console.error(error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
