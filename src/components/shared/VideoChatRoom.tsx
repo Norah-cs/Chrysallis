@@ -41,6 +41,10 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
     // Initialize socket connection
     const newSocket = io('http://localhost:5000', {
       transports: ['websocket'],
+      forceNew: true, // Force a new connection
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
     });
 
     newSocket.on('connect', () => {
@@ -60,6 +64,24 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
         }
       };
       console.log('📤 Sending join-room event:', joinData);
+      newSocket.emit('join-room', joinData);
+    });
+
+    newSocket.on('reconnect', () => {
+      console.log('🔄 Reconnected to server with socket ID:', newSocket.id);
+      // Rejoin room after reconnection
+      const joinData = {
+        roomId,
+        userData: {
+          name: userData.name,
+          email: userData.email,
+          techInterest: userData.techInterest,
+          practiceGoals: userData.practiceGoals,
+          university: userData.university,
+          year: userData.year
+        }
+      };
+      console.log('📤 Re-sending join-room event after reconnect:', joinData);
       newSocket.emit('join-room', joinData);
     });
 
@@ -104,10 +126,17 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
     newSocket.on('error', (error) => {
       console.error('❌ Socket error:', error);
+      setIsConnected(false);
     });
 
     newSocket.on('disconnect', (reason) => {
       console.log('🔌 Socket disconnected:', reason);
+      setIsConnected(false);
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('❌ Connection error:', error);
+      setIsConnected(false);
     });
 
     setSocket(newSocket);
@@ -257,10 +286,13 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
         {/* Header */}
         <div className="bg-gray-800 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
             <h2 className="text-white font-semibold">
               {isWaitingForMatch ? 'Finding your perfect match...' : `Chatting with ${matchedUser?.name}`}
             </h2>
+            {!isConnected && (
+              <span className="text-red-400 text-sm">(Disconnected)</span>
+            )}
           </div>
           <button
             onClick={handleLeave}
@@ -284,6 +316,17 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
                   <div className="text-sm text-gray-400">Your interests: {userData.techInterest}</div>
                   <div className="text-sm text-gray-400">Your goals: {userData.practiceGoals.join(', ')}</div>
                 </div>
+                {!isConnected && (
+                  <div className="mt-6">
+                    <p className="text-red-400 mb-3">Connection lost. Please refresh the page to reconnect.</p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Reconnect
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
