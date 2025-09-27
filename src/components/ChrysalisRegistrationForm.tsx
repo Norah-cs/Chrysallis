@@ -18,10 +18,10 @@ const PRACTICE_GOALS = [
 ];
 
 const YEAR_OPTIONS = [
-  { value: '1st', label: '1st year' },
-  { value: '2nd', label: '2nd year' },
-  { value: '3rd', label: '3rd year' },
-  { value: '4th+', label: '4th year or above' },
+  { value: 1, label: '1st year' },
+  { value: 2, label: '2nd year' },
+  { value: 3, label: '3rd year' },
+  { value: 4, label: '4th year or above' },
 ];
 
 const BUTTERFLY_THEMES = [
@@ -214,28 +214,31 @@ export default function ChrysalisRegistrationForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      // Scroll to first error
-      const firstErrorField = Object.keys(errors)[0];
-      const element = document.getElementById(firstErrorField);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        element.focus();
-      }
-      return;
-    }
 
-    setSubmitted(true);
-    setShowButterflyAnimation(true);
-    console.log('Chrysalis Registration:', formData);
-    
-    // Simulate API call
-    setTimeout(() => {
-      alert('Registration successful! Welcome to Chrysalis 🦋');
-    }, 1000);
+    if (!validateForm()) return;
+
+    try {
+      const res = await fetch('http://localhost:5000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData), // send your formData as JSON
+      });
+
+      const data = await res.json();
+      console.log('Server response:', data);
+
+      if (res.ok) {
+        alert('Registration successful!');
+        setSubmitted(true);
+      } else {
+        alert('Error: ' + data.message);
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+      alert('Network error');
+    }
   };
 
   useEffect(() => {
@@ -373,7 +376,7 @@ export default function ChrysalisRegistrationForm() {
                 id="year"
                 className="w-full rounded-xl border-2 border-gray-300 shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 p-3"
                 value={formData.year}
-                onChange={(e) => updateField('year', e.target.value)}
+                onChange={(e) => updateField('year', Number(e.target.value))}
               >
                 <option value="">Select your year</option>
                 {YEAR_OPTIONS.map(option => (
