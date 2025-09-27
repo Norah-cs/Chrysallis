@@ -101,9 +101,11 @@ io.on('connection', (socket) => {
       const waitingCount = await getWaitingUsersCount(roomId);
       console.log(`📊 Total users waiting in room ${roomId}: ${waitingCount}`);
       
-      // Try to find a match
+      // Try to find a match (with a small delay to ensure socket is ready)
       console.log(`🔍 Looking for matches...`);
-      await findMatch(userId, roomId);
+      setTimeout(async () => {
+        await findMatch(userId, roomId);
+      }, 100); // Small delay to ensure socket connection is stable
     } catch (error) {
       console.error('❌ Error joining room:', error);
       socket.emit('error', { message: 'Failed to join room' });
@@ -235,6 +237,8 @@ async function findMatch(userId, roomId) {
     
     // Notify both users about the match
     console.log(`📡 Sending match notifications...`);
+    
+    // Send match notification to current user (the one who just joined)
     io.to(userId).emit('user-matched', {
       id: bestMatch.socketId,
       name: bestMatch.name,
@@ -243,7 +247,9 @@ async function findMatch(userId, roomId) {
       university: bestMatch.university,
       year: bestMatch.year
     });
+    console.log(`✅ Match notification sent to ${currentUser.name} (${userId})`);
     
+    // Send match notification to the matched user
     io.to(bestMatch.socketId).emit('user-matched', {
       id: userId,
       name: currentUser.name,
@@ -252,6 +258,7 @@ async function findMatch(userId, roomId) {
       university: currentUser.university,
       year: currentUser.year
     });
+    console.log(`✅ Match notification sent to ${bestMatch.name} (${bestMatch.socketId})`);
     
     console.log(`✅ Match notifications sent to both users`);
     

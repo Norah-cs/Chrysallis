@@ -44,11 +44,11 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
     });
 
     newSocket.on('connect', () => {
-      console.log('Connected to server');
+      console.log('🔌 Connected to server with socket ID:', newSocket.id);
       setIsConnected(true);
       
       // Join room with user data for matching
-      newSocket.emit('join-room', {
+      const joinData = {
         roomId,
         userData: {
           name: userData.name,
@@ -58,11 +58,14 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
           university: userData.university,
           year: userData.year
         }
-      });
+      };
+      console.log('📤 Sending join-room event:', joinData);
+      newSocket.emit('join-room', joinData);
     });
 
     newSocket.on('user-matched', (matchedUserData) => {
-      console.log('User matched:', matchedUserData);
+      console.log('🎉 USER MATCHED EVENT RECEIVED:', matchedUserData);
+      console.log('Current socket ID:', newSocket.id);
       setMatchedUser(matchedUserData);
       setIsWaitingForMatch(false);
     });
@@ -97,6 +100,14 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
     newSocket.on('chat-message', (message) => {
       setChatMessages(prev => [...prev, message]);
+    });
+
+    newSocket.on('error', (error) => {
+      console.error('❌ Socket error:', error);
+    });
+
+    newSocket.on('disconnect', (reason) => {
+      console.log('🔌 Socket disconnected:', reason);
     });
 
     setSocket(newSocket);
