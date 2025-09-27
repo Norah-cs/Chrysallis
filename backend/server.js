@@ -12,8 +12,12 @@ app.post("/api/register", async (req, res) => {
     const result = await insertNewUser(req.body); // req.body is your formData
     res.status(201).json({ message: "User registered", id: result.insertedId });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    if (err.code === 11000 && err.keyPattern && err.keyPattern.email) {
+      res.status(400).json({ message: "This email is already registered." });
+    } else {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+    }
   }
 });
 

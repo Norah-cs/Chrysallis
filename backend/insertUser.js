@@ -13,6 +13,8 @@ export async function insertNewUser(formData) {
     const db = client.db("UserData");
     const coll = db.collection("users");
 
+    await coll.createIndex({ email: 1 }, { unique: true });
+
 
     const result = await coll.insertOne(formData);
     return result;
