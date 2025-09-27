@@ -1,6 +1,9 @@
 import React from 'react';
-import { Sparkles, Users, Target, Award, ChevronRight } from 'lucide-react';
+import { Sparkles, Users, Target, Award, ChevronRight, Store } from 'lucide-react';
 import Layout from '../Layout/Layout';
+// Update the import path to match the actual location and filename of LogoLoop
+import LogoLoop from "../LogoLoop/LogoLoop";
+import { StoreImages } from "../LogoLoop/StoreImages";
 
 interface HomePageProps {
   onGetStarted: () => void;
@@ -62,6 +65,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
             <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
           </button>
         </header>
+
+        {/* Logo Loop Section */}
+        <div className="my-16">
+            <LogoLoop logos={StoreImages} ariaLabel="Origami designs" />
+        </div>
+
 
         {/* Features Grid */}
         <section className="mb-16">
@@ -135,24 +144,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
             <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
               How Chrysalis Helps You Grow
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {features.map((feature, index) => (
-                <div
-                  key={index}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 border border-white/20"
-                >
-                  <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-4 text-white">
-                    {feature.icon}
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-800 mb-3">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    {feature.description}
-                  </p>
-                </div>
-              ))}
-            </div>
           </section>
 
           {/* Stats Section */}
