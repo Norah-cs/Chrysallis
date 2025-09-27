@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { User, Mail, Phone, MapPin, Calendar, BookOpen, Award, Settings, Camera, CreditCard as Edit3, Save, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User, Mail, Phone, MapPin, Calendar, BookOpen, Award, Camera, CreditCard as Edit3, Save, X } from "lucide-react";
+import { FormData } from "../../types";
 
 function Profile() {
   const [isEditing, setIsEditing] = useState(false);
@@ -15,7 +16,36 @@ function Profile() {
     year: "Junior"
   });
 
+  // Load user data from localStorage on component mount
+  useEffect(() => {
+    const savedUserData = localStorage.getItem('chrysallisUserData');
+    if (savedUserData) {
+      try {
+        const userData: FormData = JSON.parse(savedUserData);
+        // Map registration data to profile data
+        setProfileData({
+          name: userData.name || "Jane Doe",
+          email: userData.email || "jane.doe@student.edu",
+          phone: "+x (xxx) xxx-xxxx", // Not in registration form, keep default
+          location: "City, Country", // Not in registration form, keep default
+          joinDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+          bio: userData.introBlurb || "Computer Science student passionate about machine learning and web development. Always eager to learn new technologies and collaborate on exciting projects.",
+          university: userData.university || "University Name",
+          major: userData.techInterest || "Tech Interest",
+          year: userData.year ? `Year ${userData.year}` : "Year of Study"
+        });
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+  }, []);
+
   const [editData, setEditData] = useState(profileData);
+
+  // Update editData when profileData changes
+  useEffect(() => {
+    setEditData(profileData);
+  }, [profileData]);
 
   const stats = [
     { label: "Study Hours", value: "247", icon: BookOpen },

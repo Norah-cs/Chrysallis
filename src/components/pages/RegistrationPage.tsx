@@ -129,6 +129,8 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
         if (res.ok) {
           alert('Registration successful! Welcome to Chrysallis 🦋');
           setSubmitted(true);
+          // Store user data in localStorage for profile page
+          localStorage.setItem('chrysallisUserData', JSON.stringify(formData));
           // Navigate to profile page after successful registration
           setTimeout(() => {
             navigate('/profile');
