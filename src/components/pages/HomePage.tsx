@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sparkles, Users, Target, Award, ChevronRight } from 'lucide-react';
+import { Footer } from '../footer/Footer';
 
 interface HomePageProps {
   onGetStarted: () => void;
@@ -45,7 +46,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
             <span className="text-4xl">🦋</span>
           </div>
           <h1 className="text-6xl font-extrabold bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent mb-6 leading-tight">
-            Welcome to Chrysalis
+            Welcome to Chrysallis
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
             Transform your tech career journey with personalized practice sessions, expert feedback, 
@@ -64,7 +65,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
         {/* Features Grid */}
         <section className="mb-16">
           <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
-            How Chrysalis Helps You Grow
+            How Chrysallis Helps You Grow
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
@@ -117,7 +118,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
               Ready to Spread Your Wings?
             </h2>
             <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
-              Join thousands of students who have transformed their careers with Chrysalis. 
+              Join thousands of students who have transformed their careers with Chrysallis. 
               Your journey from student to professional starts here.
             </p>
             <button
@@ -130,6 +131,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
           </div>
         </section>
       </div>
+      <Footer/>
     </div>
   );
 };

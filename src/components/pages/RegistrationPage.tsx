@@ -5,6 +5,7 @@ import { FormData } from '../../types';
 import { TECH_OPTIONS, PRACTICE_GOALS, YEAR_OPTIONS, BUTTERFLY_THEMES } from '../../constants';
 import { ButterflySVG } from '../shared/ButterflySVG';
 import { ProgressIndicator } from '../shared/ProgressIndicator';
+import { Footer } from '../footer/Footer';
 
 interface RegistrationPageProps {
   onBack: () => void;
@@ -110,10 +111,10 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
 
     setSubmitted(true);
     setShowButterflyAnimation(true);
-    console.log('Chrysalis Registration:', formData);
+    console.log('Chrysallis Registration:', formData);
     
     setTimeout(() => {
-      alert('Registration successful! Welcome to Chrysalis 🦋');
+      alert('Registration successful! Welcome to Chrysallis 🦋');
     }, 1000);
   };
 
@@ -192,7 +193,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
 
         <div className="text-center mb-8">
           <h1 className="text-4xl font-extrabold bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent mb-2">
-            Chrysalis Registration
+            Chrysallis Registration
           </h1>
           <p className="text-gray-600 text-lg">
             Transform your tech journey with us
@@ -387,7 +388,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
               }`}
               value={formData.introBlurb}
               onChange={(e) => updateField('introBlurb', e.target.value)}
-              placeholder="Share your background, interests, and what you hope to achieve through Chrysalis. This helps us match you with the right peers and mentors."
+              placeholder="Share your background, interests, and what you hope to achieve through Chrysallis. This helps us match you with the right peers and mentors."
             />
             <div className="flex justify-between items-center mt-2">
               <p className={`text-sm ${formData.introBlurb.length >= 30 ? 'text-green-600' : 'text-gray-500'}`}>
@@ -499,12 +500,13 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
                   Registering...
                 </span>
               ) : (
-                'Begin Your Chrysalis Journey 🦋'
+                'Begin Your Chrysallis Journey 🦋'
               )}
             </button>
           </div>
         </form>
       </div>
+      <Footer/>
     </div>
   );
 };
