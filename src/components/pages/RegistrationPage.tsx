@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { ChevronLeft } from 'lucide-react';
 import { FormData } from '../../types';
@@ -11,6 +12,7 @@ interface RegistrationPageProps {
 }
 
 export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
@@ -113,10 +115,6 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
     setShowButterflyAnimation(true);
     console.log('Chrysallis Registration:', formData);
     
-    setTimeout(() => {
-      alert('Registration successful! Welcome to Chrysallis 🦋');
-    }, 1000);
-    
 
     try {
       const res = await fetch('http://localhost:5000/api/register', {
@@ -128,12 +126,16 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
       const data = await res.json();
       console.log('Server response:', data);
 
-      if (res.ok) {
-        alert('Registration successful!');
-        setSubmitted(true);
-      } else {
-        alert('Error: ' + data.message);
-      }
+        if (res.ok) {
+          alert('Registration successful! Welcome to Chrysallis 🦋');
+          setSubmitted(true);
+          // Navigate to profile page after successful registration
+          setTimeout(() => {
+            navigate('/profile');
+          }, 1500); // Small delay to show the success message
+        } else {
+          alert('Error: ' + data.message);
+        }
     } catch (err) {
       console.error('Fetch error:', err);
       alert('Network error');
