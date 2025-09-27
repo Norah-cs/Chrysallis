@@ -1,10 +1,27 @@
-import { useState } from "react";
-import { Users, Clock, Code, MessageSquare, Briefcase, Search, Plus, Sparkles, Target, TrendingUp } from "lucide-react";
-import Layout from '../Layout/Layout';
+import { useState, useEffect } from "react";
+import { Users, Clock, Code, MessageSquare, Briefcase, Search, Sparkles, Target, TrendingUp } from "lucide-react";
+import VideoChatRoom from '../shared/VideoChatRoom';
+import { FormData } from '../../types';
 
 function Rooms() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [isInVideoChat, setIsInVideoChat] = useState(false);
+  const [currentRoomId, setCurrentRoomId] = useState("");
+  const [userData, setUserData] = useState<FormData | null>(null);
+
+  // Load user data from localStorage
+  useEffect(() => {
+    const savedUserData = localStorage.getItem('chrysallisUserData');
+    if (savedUserData) {
+      try {
+        const parsedData: FormData = JSON.parse(savedUserData);
+        setUserData(parsedData);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+  }, []);
 
   const categories = [
     { id: "all", label: "All Rooms", icon: Sparkles },
@@ -114,6 +131,21 @@ function Rooms() {
       case "Advanced": return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const handleJoinRoom = (roomId: string) => {
+    if (!userData) {
+      alert('Please complete your registration first to join practice rooms.');
+      return;
+    }
+    
+    setCurrentRoomId(roomId);
+    setIsInVideoChat(true);
+  };
+
+  const handleLeaveVideoChat = () => {
+    setIsInVideoChat(false);
+    setCurrentRoomId("");
   };
 
   return (
@@ -244,7 +276,10 @@ function Rooms() {
               </div>
 
               {/* Join Button */}
-              <button className={`w-full bg-gradient-to-r ${room.color} text-white py-3 rounded-xl font-medium hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2`}>
+              <button 
+                onClick={() => handleJoinRoom(room.id.toString())}
+                className={`w-full bg-gradient-to-r ${room.color} text-white py-3 rounded-xl font-medium hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2`}
+              >
                 <Target className="w-4 h-4" />
                 {room.isActive ? 'Join Practice Session' : 'Join Waiting Room'}
               </button>
@@ -282,6 +317,15 @@ function Rooms() {
           </button>
         </div>
       </div>
+
+      {/* Video Chat Room */}
+      {isInVideoChat && userData && (
+        <VideoChatRoom
+          roomId={currentRoomId}
+          userData={userData}
+          onLeave={handleLeaveVideoChat}
+        />
+      )}
     </div>
   );
 }

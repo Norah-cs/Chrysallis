@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { ChevronLeft } from 'lucide-react';
 import { FormData } from '../../types';
@@ -11,9 +12,11 @@ interface RegistrationPageProps {
 }
 
 export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
+    password: '',
     university: '',
     year: '',
     techInterest: '',
@@ -84,6 +87,15 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
     if (!formData.name.trim()) newErrors.name = 'Name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     if (!formData.email.includes('@')) newErrors.email = 'Please enter a valid email';
+    if (!formData.password.trim()) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.trim().length < 8) {
+      newErrors.password = 'Password must have at least 8 characters';
+    } else if (!/[A-Z]/.test(formData.password)) {
+      newErrors.password = 'Password must include a captial letter';
+    } else if (!/\d/.test(formData.password)) {
+      newErrors.password = 'Password must include a number';
+    }
     if (formData.introBlurb.trim().length < 30) {
       newErrors.introBlurb = 'Please write at least 30 characters about yourself';
     }
@@ -97,15 +109,12 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) return;
 
-    setSubmitted(true);
     setShowButterflyAnimation(true);
     console.log('Chrysallis Registration:', formData);
     
-    setTimeout(() => {
-      alert('Registration successful! Welcome to Chrysallis 🦋');
-    }, 1000);
-    if (!validateForm()) return;
 
     try {
       const res = await fetch('http://localhost:5000/api/register', {
@@ -117,12 +126,18 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
       const data = await res.json();
       console.log('Server response:', data);
 
-      if (res.ok) {
-        alert('Registration successful!');
-        setSubmitted(true);
-      } else {
-        alert('Error: ' + data.message);
-      }
+        if (res.ok) {
+          alert('Registration successful! Welcome to Chrysallis 🦋');
+          setSubmitted(true);
+          // Store user data in localStorage for profile page
+          localStorage.setItem('chrysallisUserData', JSON.stringify(formData));
+          // Navigate to profile page after successful registration
+          setTimeout(() => {
+            navigate('/profile');
+          }, 1500); // Small delay to show the success message
+        } else {
+          alert('Error: ' + data.message);
+        }
     } catch (err) {
       console.error('Fetch error:', err);
       alert('Network error');
@@ -215,23 +230,23 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Personal Info */}
+          <div>
+            <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
+              Name *
+            </label>
+            <input
+              type="text"
+              id="name"
+              className={`w-full rounded-xl border-2 shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 p-3 ${
+                errors.name ? 'border-red-500 error-shake' : 'border-gray-300'
+              }`}
+              value={formData.name}
+              onChange={(e) => updateField('name', e.target.value)}
+              placeholder="Your full name"
+            />
+            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+          </div>
           <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
-                Name *
-              </label>
-              <input
-                type="text"
-                id="name"
-                className={`w-full rounded-xl border-2 shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 p-3 ${
-                  errors.name ? 'border-red-500 error-shake' : 'border-gray-300'
-                }`}
-                value={formData.name}
-                onChange={(e) => updateField('name', e.target.value)}
-                placeholder="Your full name"
-              />
-              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-            </div>
             <div>
               <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
                 Email *
@@ -247,6 +262,22 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
                 placeholder="your.email@university.edu"
               />
               {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+            </div>
+            <div>
+              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+                Password *
+              </label>
+              <input
+                type="text"
+                id="password"
+                className={`w-full rounded-xl border-2 shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 p-3 ${
+                  errors.password ? 'border-red-500 error-shake' : 'border-gray-300'
+                }`}
+                value={formData.password}
+                onChange={(e) => updateField('password', e.target.value)}
+                placeholder="Your password"
+              />
+              {errors.password && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
             </div>
           </div>
 
@@ -489,6 +520,17 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
               </div>
             </div>
           </fieldset>
+
+          {/* Error Messages */}
+          {Object.keys(errors).length > 0 && (
+            <div className="mt-4 space-y-2">
+              {Object.values(errors).map((err, idx) => (
+                <p key={idx} className="text-red-600 text-sm font-medium">
+                  {err}
+                </p>
+              ))}
+            </div>
+          )}
 
           {/* Submit Button */}
           <div className="pt-6">
