@@ -28,7 +28,7 @@ export interface PracticeGoal {
 }
 
 export interface YearOption {
-  value: string;
+  value: number;
   label: string;
 }
 

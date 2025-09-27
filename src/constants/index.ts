@@ -17,10 +17,10 @@ export const PRACTICE_GOALS: PracticeGoal[] = [
 ];
 
 export const YEAR_OPTIONS: YearOption[] = [
-  { value: '1st', label: '1st year' },
-  { value: '2nd', label: '2nd year' },
-  { value: '3rd', label: '3rd year' },
-  { value: '4th+', label: '4th year or above' },
+  { value: 1, label: '1st year' },
+  { value: 2, label: '2nd year' },
+  { value: 3, label: '3rd year' },
+  { value: 4, label: '4th year or above' },
 ];
 
 export const BUTTERFLY_THEMES: ButterflyTheme[] = [

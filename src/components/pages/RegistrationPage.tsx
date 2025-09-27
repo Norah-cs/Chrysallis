@@ -96,18 +96,8 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      const firstErrorField = Object.keys(errors)[0];
-      const element = document.getElementById(firstErrorField);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        element.focus();
-      }
-      return;
-    }
 
     setSubmitted(true);
     setShowButterflyAnimation(true);
@@ -116,6 +106,28 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
     setTimeout(() => {
       alert('Registration successful! Welcome to Chrysallis 🦋');
     }, 1000);
+    if (!validateForm()) return;
+
+    try {
+      const res = await fetch('http://localhost:5000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData), // send your formData as JSON
+      });
+
+      const data = await res.json();
+      console.log('Server response:', data);
+
+      if (res.ok) {
+        alert('Registration successful!');
+        setSubmitted(true);
+      } else {
+        alert('Error: ' + data.message);
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+      alert('Network error');
+    }
   };
 
   useEffect(() => {
@@ -262,7 +274,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
                 id="year"
                 className="w-full rounded-xl border-2 border-gray-300 shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 p-3"
                 value={formData.year}
-                onChange={(e) => updateField('year', e.target.value)}
+                onChange={(e) => updateField('year', Number(e.target.value))}
               >
                 <option value="">Select your year</option>
                 {YEAR_OPTIONS.map(option => (
