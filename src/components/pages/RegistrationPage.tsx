@@ -1,135 +1,17 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { ChevronLeft } from 'lucide-react';
+import { FormData } from '../../types';
+import { TECH_OPTIONS, PRACTICE_GOALS, YEAR_OPTIONS, BUTTERFLY_THEMES } from '../../constants';
+import { ButterflySVG } from '../shared/ButterflySVG';
+import { ProgressIndicator } from '../shared/ProgressIndicator';
 
-const TECH_OPTIONS = [
-  { value: 'software-engineering', label: '💻 Software Engineering' },
-  { value: 'data-science', label: '📊 Data Science' },
-  { value: 'product-management', label: '📦 Product Management' },
-  { value: 'ux-design', label: '🎨 UX Design' },
-  { value: 'cybersecurity', label: '🛡️ Cybersecurity' },
-  { value: 'ai-ml', label: '🧠 AI / Machine Learning' },
-];
+interface RegistrationPageProps {
+  onBack: () => void;
+}
 
-const PRACTICE_GOALS = [
-  { id: 'confidence', label: 'Build confidence', emoji: '💪' },
-  { id: 'clarity', label: 'Improve communication', emoji: '💬' },
-  { id: 'speed', label: 'Practice under time pressure', emoji: '⚡' },
-  { id: 'feedback', label: 'Get constructive feedback', emoji: '📝' },
-];
-
-const YEAR_OPTIONS = [
-  { value: '1st', label: '1st year' },
-  { value: '2nd', label: '2nd year' },
-  { value: '3rd', label: '3rd year' },
-  { value: '4th+', label: '4th year or above' },
-];
-
-const BUTTERFLY_THEMES = [
-  { name: 'Sunset', colors: ['#FEF3C7', '#FBBF24', '#F59E0B', '#D97706', '#B45309', '#92400E'] },
-  { name: 'Ocean', colors: ['#DBEAFE', '#93C5FD', '#60A5FA', '#3B82F6', '#2563EB', '#1D4ED8'] },
-  { name: 'Forest', colors: ['#D1FAE5', '#6EE7B7', '#34D399', '#10B981', '#059669', '#047857'] },
-  { name: 'Rose', colors: ['#FCE7F3', '#F9A8D4', '#F472B6', '#EC4899', '#DB2777', '#BE185D'] },
-  { name: 'Lavender', colors: ['#F3E8FF', '#C4B5FD', '#A78BFA', '#8B5CF6', '#7C3AED', '#6D28D9'] },
-  { name: 'Coral', colors: ['#FEF2F2', '#FECACA', '#FCA5A5', '#F87171', '#EF4444', '#DC2626'] },
-];
-
-const ButterflySVG = ({ fold, themeColors, showAnimation }) => {
-  const wingPath1 = "M0 50 C 20 20, 40 0, 70 10 S 90 40, 70 70 S 40 100, 20 80 S 0 50, 0 50Z";
-  const wingPath2 = "M100 50 C 80 20, 60 0, 30 10 S 10 40, 30 70 S 60 100, 80 80 S 100 50, 100 50Z";
-
-  const getTransform = (currentFold) => {
-    switch (currentFold) {
-      case 1: return { scale: 0.1, rotateY: 0, opacity: 0 };
-      case 2: return { scale: 0.3, rotateY: 0, opacity: 0.3 };
-      case 3: return { scale: 0.5, rotateY: 0, opacity: 0.6 };
-      case 4: return { scale: 0.7, rotateY: 0, opacity: 0.8 };
-      case 5: return { scale: 0.9, rotateY: 0, opacity: 0.95 };
-      case 6: return { scale: 1, rotateY: 0, opacity: 1 };
-      default: return { scale: 0, rotateY: 0, opacity: 0 };
-    }
-  };
-
-  const { scale, rotateY, opacity } = getTransform(fold);
-  const animationClass = showAnimation && fold === 6 ? 'animate-flutter' : '';
-
-  return (
-    <svg
-      width="150"
-      height="150"
-      viewBox="0 0 100 100"
-      className={`absolute transition-all duration-700 ease-in-out ${animationClass}`}
-      style={{
-        transform: `scale(${scale}) rotateY(${rotateY}deg)`,
-        opacity: opacity,
-        filter: `drop-shadow(0 4px 8px rgba(0,0,0,0.2))`
-      }}
-    >
-      {/* Body */}
-      <ellipse cx="50" cy="50" rx="8" ry="30" fill={themeColors[5]} />
-
-      {/* Wings - layered for depth */}
-      <g className="transition-all duration-700 ease-in-out transform origin-center"
-         style={{ transform: `scale(${fold >= 2 ? 1 : 0})` }}>
-        {/* Back wings */}
-        <path d={wingPath1} fill={themeColors[0]} transform="translate(-10, 0) scale(0.9) rotate(-10 50 50)" className="opacity-70" />
-        <path d={wingPath2} fill={themeColors[0]} transform="translate(10, 0) scale(0.9) rotate(10 50 50)" className="opacity-70" />
-
-        {/* Front wings */}
-        <path d={wingPath1} fill={themeColors[1]} />
-        <path d={wingPath2} fill={themeColors[1]} />
-
-        {/* Inner wing details */}
-        <path d={wingPath1} fill={themeColors[2]} transform="scale(0.8) translate(10, 10)" className="origin-center" />
-        <path d={wingPath2} fill={themeColors[2]} transform="scale(0.8) translate(-10, 10)" className="origin-center" />
-      </g>
-    </svg>
-  );
-};
-
-const ProgressIndicator = ({ currentStep, totalSteps, foldScore }) => {
-  const steps = [
-    { label: 'Basic Info', icon: '👤' },
-    { label: 'Profile', icon: '🎓' },
-    { label: 'Goals', icon: '🎯' },
-    { label: 'About You', icon: '✍️' },
-    { label: 'Connect', icon: '🔗' },
-    { label: 'Complete', icon: '🦋' }
-  ];
-
-  return (
-    <div className="mb-8">
-      <div className="flex justify-between items-center mb-4">
-        {steps.map((step, index) => (
-          <div key={index} className="flex flex-col items-center">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
-              index < foldScore 
-                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
-                : index === foldScore - 1
-                ? 'bg-gradient-to-r from-purple-400 to-pink-400 text-white animate-pulse'
-                : 'bg-gray-200 text-gray-500'
-            }`}>
-              {step.icon}
-            </div>
-            <span className={`text-xs mt-2 font-medium transition-colors duration-300 ${
-              index < foldScore ? 'text-purple-600' : 'text-gray-400'
-            }`}>
-              {step.label}
-            </span>
-          </div>
-        ))}
-      </div>
-      <div className="w-full bg-gray-200 rounded-full h-2">
-        <div 
-          className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-500 ease-out"
-          style={{ width: `${(foldScore / 6) * 100}%` }}
-        />
-      </div>
-    </div>
-  );
-};
-
-export default function ChrysalisRegistrationForm() {
-  const [formData, setFormData] = useState({
+export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) => {
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
     university: '',
@@ -149,21 +31,20 @@ export default function ChrysalisRegistrationForm() {
 
   const [showButterflyAnimation, setShowButterflyAnimation] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const updateField = useCallback((name, value) => {
+  const updateField = useCallback((name: keyof FormData, value: any) => {
     setFormData((s) => ({ ...s, [name]: value }));
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   }, [errors]);
 
-  const updateSocial = useCallback((key, value) =>
+  const updateSocial = useCallback((key: keyof FormData['socials'], value: string) =>
     setFormData((s) => ({ ...s, socials: { ...s.socials, [key]: value } })), []
   );
 
-  const onDragEnd = useCallback((result) => {
+  const onDragEnd = useCallback((result: any) => {
     if (!result.destination) {
       return;
     }
@@ -173,13 +54,13 @@ export default function ChrysalisRegistrationForm() {
     setFormData((s) => ({ ...s, practiceGoals: items }));
   }, [formData.practiceGoals]);
 
-  const addPracticeGoal = useCallback((goalId) => {
+  const addPracticeGoal = useCallback((goalId: string) => {
     if (!formData.practiceGoals.includes(goalId)) {
       setFormData((s) => ({ ...s, practiceGoals: [...s.practiceGoals, goalId] }));
     }
   }, [formData.practiceGoals]);
 
-  const removePracticeGoal = useCallback((goalId) => {
+  const removePracticeGoal = useCallback((goalId: string) => {
     setFormData((s) => ({
       ...s,
       practiceGoals: s.practiceGoals.filter(id => id !== goalId)
@@ -198,7 +79,7 @@ export default function ChrysalisRegistrationForm() {
   }, [formData]);
 
   const validateForm = () => {
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
     
     if (!formData.name.trim()) newErrors.name = 'Name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
@@ -214,11 +95,10 @@ export default function ChrysalisRegistrationForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
-      // Scroll to first error
       const firstErrorField = Object.keys(errors)[0];
       const element = document.getElementById(firstErrorField);
       if (element) {
@@ -232,7 +112,6 @@ export default function ChrysalisRegistrationForm() {
     setShowButterflyAnimation(true);
     console.log('Chrysalis Registration:', formData);
     
-    // Simulate API call
     setTimeout(() => {
       alert('Registration successful! Welcome to Chrysalis 🦋');
     }, 1000);
@@ -251,8 +130,8 @@ export default function ChrysalisRegistrationForm() {
     return BUTTERFLY_THEMES.find(theme => theme.name === formData.butterflyTheme)?.colors || BUTTERFLY_THEMES[0].colors;
   }, [formData.butterflyTheme]);
 
-  const getSocialIcon = (platform) => {
-    const icons = {
+  const getSocialIcon = (platform: string) => {
+    const icons: Record<string, string> = {
       linkedin: '💼',
       instagram: '📸',
       discord: '🎮',
@@ -302,6 +181,15 @@ export default function ChrysalisRegistrationForm() {
       </div>
 
       <div className="relative z-10 bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 sm:p-10 w-full max-w-2xl transform transition-all duration-500 ease-in-out hover:shadow-3xl border border-white/20">
+        {/* Back Button */}
+        <button
+          onClick={onBack}
+          className="mb-6 flex items-center text-gray-600 hover:text-purple-600 transition-colors duration-200 font-medium"
+        >
+          <ChevronLeft className="w-5 h-5 mr-1" />
+          Back to Home
+        </button>
+
         <div className="text-center mb-8">
           <h1 className="text-4xl font-extrabold bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent mb-2">
             Chrysalis Registration
@@ -440,6 +328,8 @@ export default function ChrysalisRegistrationForm() {
                       >
                         {formData.practiceGoals.map((goalId, index) => {
                           const goal = PRACTICE_GOALS.find(g => g.id === goalId);
+                          if (!goal) return null;
+                          
                           return (
                             <Draggable key={goalId} draggableId={goalId} index={index}>
                               {(provided, snapshot) => (
@@ -491,7 +381,7 @@ export default function ChrysalisRegistrationForm() {
             </label>
             <textarea
               id="introBlurb"
-              rows="4"
+              rows={4}
               className={`w-full rounded-xl border-2 shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 p-3 resize-none ${
                 errors.introBlurb ? 'border-red-500 error-shake' : 'border-gray-300'
               }`}
@@ -561,8 +451,8 @@ export default function ChrysalisRegistrationForm() {
                     id={key}
                     className="w-full rounded-xl border-2 border-gray-300 shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 p-3"
                     placeholder={`Your ${key} handle`}
-                    value={formData.socials[key]}
-                    onChange={(e) => updateSocial(key, e.target.value)}
+                    value={formData.socials[key as keyof FormData['socials']]}
+                    onChange={(e) => updateSocial(key as keyof FormData['socials'], e.target.value)}
                   />
                 </div>
               ))}
@@ -617,4 +507,4 @@ export default function ChrysalisRegistrationForm() {
       </div>
     </div>
   );
-}
+};
