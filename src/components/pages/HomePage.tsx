@@ -1,10 +1,6 @@
 import React from 'react';
 import { Sparkles, Users, Target, Award, ChevronRight } from 'lucide-react';
-<<<<<<< HEAD
-import { Footer } from '../footer/Footer';
-=======
 import Layout from '../Layout/Layout';
->>>>>>> 8a2e2abbed4ffe9ab2ff9f3ea9993783b5e1eb81
 
 interface HomePageProps {
   onGetStarted: () => void;
@@ -133,8 +129,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
               Begin Your Transformation
               <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
             </button>
-          </header>
-
+            </div>
           {/* Features Grid */}
           <section className="mb-16">
             <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
@@ -203,6 +198,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
               </button>
             </div>
           </section>
+        </section>
         </div>
       </div>
     }
