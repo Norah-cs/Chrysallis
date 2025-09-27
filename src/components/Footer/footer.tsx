@@ -15,7 +15,7 @@ export const Footer: React.FC = () => {
                 <span className="text-white text-lg">🦋</span>
               </div>
               <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Chrysalis
+                Chrysallis
               </h3>
             </div>
             <p className="text-gray-600 mb-4 max-w-md">
@@ -107,13 +107,15 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Bottom Section */}
-        <div className="border-t border-gray-200 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-500 text-sm">
-            © {currentYear} Chrysalis. All rights reserved.
-          </p>
-          <p className="text-gray-500 text-sm flex items-center mt-4 md:mt-0">
-            Made with <Heart className="w-4 h-4 text-red-500 mx-1" /> for students everywhere
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="text-center">
+                <p className="text-gray-500 text-sm mt-4 py-4"> 
+                    © {currentYear} Chrysallis. All rights reserved.
+                </p>
+                <p className="text-gray-500 text-sm flex items-center justify-center"> 
+                    Made with <Heart className="text-red-500 mx-1 text-base" /> for students everywhere
+                </p>
+            </div>
         </div>
       </div>
     </footer>

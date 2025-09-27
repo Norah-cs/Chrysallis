@@ -1,29 +1,29 @@
-import React, { useState } from 'react';
-import { HomePage } from './components/pages/HomePage';
-import { RegistrationPage } from './components/pages/RegistrationPage';
-
-type CurrentPage = 'home' | 'registration';
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar/Navbar";
+import Footer from "./components/Footer/Footer";
+import HomePage from "./components/pages/HomePage";
+import Rooms from "./components/pages/Rooms";
+import Features from "./components/pages/Features";
+import Profile from "./components/pages/Profile";
+import { RegistrationPage } from "./components/pages/RegistrationPage";
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<CurrentPage>('home');
-
-  const handleGetStarted = () => {
-    setCurrentPage('registration');
-  };
-
-  const handleBackToHome = () => {
-    setCurrentPage('home');
-  };
-
   return (
-    <>
-      {currentPage === 'home' && (
-        <HomePage onGetStarted={handleGetStarted} />
-      )}
-      {currentPage === 'registration' && (
-        <RegistrationPage onBack={handleBackToHome} />
-      )}
-    </>
+    <Router>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/register" element={<RegistrationPage onBack={() => window.history.back()} />} />
+            <Route path="/rooms" element={<Rooms />} />
+            <Route path="/features" element={<Features />} />
+            <Route path="/profile" element={<Profile />} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
+    </Router>
   );
 }
 

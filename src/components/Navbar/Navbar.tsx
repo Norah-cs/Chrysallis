@@ -7,9 +7,9 @@ function Navbar() {
   const toggleMenu = () => setIsOpen(!isOpen);
 
   const navLinks = [
-    { href: "#rooms", label: "Rooms", icon: Home },
-    { href: "#features", label: "Features", icon: Settings },
-    { href: "#profile", label: "Profile", icon: User },
+    { href: "/rooms", label: "Rooms", icon: Home },
+    { href: "/features", label: "Features", icon: Settings },
+    { href: "/profile", label: "Profile", icon: User },
   ];
 
   return (
@@ -19,9 +19,12 @@ function Navbar() {
           {/* Logo/Brand */}
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                YourApp
-              </h1>
+              <a href="/">
+                <img 
+                src="/assets/chrysallis-logo.png" 
+                alt="Chrysallis"
+                className="h-14 w-auto" />
+                </a>
             </div>
           </div>
 
