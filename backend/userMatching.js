@@ -54,8 +54,13 @@ export async function addUserToWaitingList(userData) {
   const waitingUsers = db.collection("waitingUsers");
   
   try {
+    console.log(`📝 Adding user to waiting list: ${userData.name} (${userData.socketId})`);
+    
     // Remove user if already waiting (in case of reconnection)
-    await waitingUsers.deleteOne({ socketId: userData.socketId });
+    const deleteResult = await waitingUsers.deleteOne({ socketId: userData.socketId });
+    if (deleteResult.deletedCount > 0) {
+      console.log(`🗑️ Removed existing waiting user: ${userData.socketId}`);
+    }
     
     // Add user to waiting list
     const result = await waitingUsers.insertOne({
@@ -64,9 +69,19 @@ export async function addUserToWaitingList(userData) {
       joinedAt: new Date()
     });
     
+    console.log(`✅ User added to waiting list with ID: ${result.insertedId}`);
+    
+    // Verify the user was added
+    const verifyUser = await waitingUsers.findOne({ socketId: userData.socketId });
+    if (verifyUser) {
+      console.log(`✅ Verification: User found in waiting list`);
+    } else {
+      console.log(`❌ Verification failed: User not found in waiting list`);
+    }
+    
     return result;
   } catch (error) {
-    console.error('Error adding user to waiting list:', error);
+    console.error('❌ Error adding user to waiting list:', error);
     throw error;
   }
 }
@@ -176,15 +191,25 @@ export function calculateCompatibilityScore(user1, user2) {
 // Find best match for a user
 export async function findBestMatch(currentUser, roomId) {
   try {
+    console.log(`🔍 Finding best match for ${currentUser.name} in room ${roomId}`);
+    
     const potentialMatches = await getPotentialMatches(currentUser, roomId);
+    console.log(`📊 Found ${potentialMatches.length} potential matches`);
     
     if (potentialMatches.length === 0) {
+      console.log(`❌ No potential matches found`);
       return null;
     }
+    
+    // Log all potential matches
+    potentialMatches.forEach((match, index) => {
+      console.log(`   Match ${index + 1}: ${match.name} (${match.techInterest})`);
+    });
     
     // Calculate compatibility scores
     const matchesWithScores = potentialMatches.map(match => {
       const score = calculateCompatibilityScore(currentUser, match);
+      console.log(`   ${currentUser.name} ↔ ${match.name}: ${score} points`);
       return { ...match, score };
     });
     
@@ -193,10 +218,18 @@ export async function findBestMatch(currentUser, roomId) {
     
     // Return the best match if score is above threshold
     const bestMatch = matchesWithScores[0];
-    return bestMatch.score > 20 ? bestMatch : null; // Minimum compatibility threshold
+    console.log(`🏆 Best match: ${bestMatch.name} with score ${bestMatch.score}`);
+    
+    if (bestMatch.score > 20) {
+      console.log(`✅ Match accepted (score > 20)`);
+      return bestMatch;
+    } else {
+      console.log(`❌ Match rejected (score too low: ${bestMatch.score} <= 20)`);
+      return null;
+    }
     
   } catch (error) {
-    console.error('Error finding best match:', error);
+    console.error('❌ Error finding best match:', error);
     throw error;
   }
 }

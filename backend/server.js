@@ -76,7 +76,12 @@ io.on('connection', (socket) => {
     const { roomId, userData } = data;
     const userId = socket.id;
     
-    console.log(`User ${userData.name} joining room ${roomId}`);
+    console.log(`\n=== USER JOINING ROOM ===`);
+    console.log(`User: ${userData.name} (${userData.email})`);
+    console.log(`Socket ID: ${userId}`);
+    console.log(`Room ID: ${roomId}`);
+    console.log(`Tech Interest: ${userData.techInterest}`);
+    console.log(`Practice Goals: ${userData.practiceGoals}`);
     
     try {
       // Store user data in MongoDB
@@ -87,13 +92,20 @@ io.on('connection', (socket) => {
         joinedAt: new Date()
       };
 
+      console.log(`Adding user to waiting list...`);
       // Add to waiting users in database
       await addUserToWaitingList(userInfo);
+      console.log(`✅ User added to waiting list successfully`);
+      
+      // Check how many users are waiting in this room
+      const waitingCount = await getWaitingUsersCount(roomId);
+      console.log(`📊 Total users waiting in room ${roomId}: ${waitingCount}`);
       
       // Try to find a match
+      console.log(`🔍 Looking for matches...`);
       await findMatch(userId, roomId);
     } catch (error) {
-      console.error('Error joining room:', error);
+      console.error('❌ Error joining room:', error);
       socket.emit('error', { message: 'Failed to join room' });
     }
   });
@@ -168,34 +180,61 @@ io.on('connection', (socket) => {
   });
 });
 
+// Helper function to get waiting users count
+async function getWaitingUsersCount(roomId) {
+  try {
+    const db = await connectToDB();
+    const waitingUsers = db.collection("waitingUsers");
+    const count = await waitingUsers.countDocuments({ roomId, status: 'waiting' });
+    return count;
+  } catch (error) {
+    console.error('Error getting waiting users count:', error);
+    return 0;
+  }
+}
+
 // Matching algorithm using MongoDB data
 async function findMatch(userId, roomId) {
   try {
+    console.log(`\n🔍 FINDING MATCH FOR USER ${userId} IN ROOM ${roomId}`);
+    
     // Get current user from database
     const currentUser = await getUserFromWaitingList(userId);
     if (!currentUser) {
-      console.log(`User ${userId} not found in waiting list`);
+      console.log(`❌ User ${userId} not found in waiting list`);
       return;
     }
+
+    console.log(`✅ Current user found: ${currentUser.name}`);
 
     // Find best match using database
     const bestMatch = await findBestMatch(currentUser, roomId);
     
     if (!bestMatch) {
-      console.log(`No matches found for user ${currentUser.name} in room ${roomId}`);
+      console.log(`❌ No matches found for user ${currentUser.name} in room ${roomId}`);
+      console.log(`💡 This could mean:`);
+      console.log(`   - No other users in the same room`);
+      console.log(`   - No compatible users (compatibility score too low)`);
+      console.log(`   - All other users already matched`);
       return;
     }
 
-    console.log(`Matching ${currentUser.name} with ${bestMatch.name} (score: ${bestMatch.score})`);
+    console.log(`🎉 MATCH FOUND!`);
+    console.log(`   ${currentUser.name} ↔ ${bestMatch.name}`);
+    console.log(`   Compatibility Score: ${bestMatch.score}`);
+    console.log(`   Tech Interest Match: ${currentUser.techInterest} === ${bestMatch.techInterest}`);
     
     // Create a matched room in database
     await createMatchedRoom(currentUser, bestMatch);
+    console.log(`✅ Matched room created in database`);
     
     // Remove both users from waiting list
     await removeUserFromWaitingList(userId);
     await removeUserFromWaitingList(bestMatch.socketId);
+    console.log(`✅ Both users removed from waiting list`);
     
     // Notify both users about the match
+    console.log(`📡 Sending match notifications...`);
     io.to(userId).emit('user-matched', {
       id: bestMatch.socketId,
       name: bestMatch.name,
@@ -214,8 +253,10 @@ async function findMatch(userId, roomId) {
       year: currentUser.year
     });
     
+    console.log(`✅ Match notifications sent to both users`);
+    
   } catch (error) {
-    console.error('Error in findMatch:', error);
+    console.error('❌ Error in findMatch:', error);
   }
 }
 
