@@ -90,6 +90,9 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       console.log('Current socket ID:', newSocket.id);
       setMatchedUser(matchedUserData);
       setIsWaitingForMatch(false);
+      
+      // Start WebRTC connection with the matched user
+      initiatePeerConnection(matchedUserData.id);
     });
 
     newSocket.on('user-left', (userId) => {
@@ -158,16 +161,20 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
   const initializeLocalStream = async () => {
     try {
+      console.log('🎥 Requesting camera and microphone access...');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true
       });
+      console.log('✅ Camera and microphone access granted');
       setLocalStream(stream);
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+        console.log('📹 Local video stream set');
       }
     } catch (error) {
-      console.error('Error accessing media devices:', error);
+      console.error('❌ Error accessing media devices:', error);
+      alert('Please allow camera and microphone access to use video chat');
     }
   };
 
@@ -186,7 +193,7 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
     }
 
     peerConnection.ontrack = (event) => {
-      console.log('Received remote stream from:', userId);
+      console.log('📹 Received remote stream from:', userId);
       setRemoteStreams(prev => ({
         ...prev,
         [userId]: event.streams[0]
@@ -195,6 +202,7 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
     peerConnection.onicecandidate = (event) => {
       if (event.candidate && socket) {
+        console.log('🧊 Sending ICE candidate to:', userId);
         socket.emit('ice-candidate', {
           targetUserId: userId,
           candidate: event.candidate
@@ -202,36 +210,85 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       }
     };
 
+    peerConnection.onconnectionstatechange = () => {
+      console.log(`🔗 Peer connection state with ${userId}:`, peerConnection.connectionState);
+    };
+
+    peerConnection.oniceconnectionstatechange = () => {
+      console.log(`🧊 ICE connection state with ${userId}:`, peerConnection.iceConnectionState);
+    };
+
     return peerConnection;
   };
 
-  const handleOffer = async (userId: string, offer: RTCSessionDescriptionInit) => {
+  const initiatePeerConnection = async (userId: string) => {
+    console.log('🔗 Initiating peer connection with:', userId);
+    
     const peerConnection = createPeerConnection(userId);
     peerConnections.current[userId] = peerConnection;
 
-    await peerConnection.setRemoteDescription(offer);
-    const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
+    try {
+      // Create and send offer
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      
+      console.log('📤 Sending offer to:', userId);
+      if (socket) {
+        socket.emit('offer', {
+          targetUserId: userId,
+          offer: offer
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error creating offer:', error);
+    }
+  };
 
-    if (socket) {
-      socket.emit('answer', {
-        targetUserId: userId,
-        answer: answer
-      });
+  const handleOffer = async (userId: string, offer: RTCSessionDescriptionInit) => {
+    console.log('📥 Received offer from:', userId);
+    const peerConnection = createPeerConnection(userId);
+    peerConnections.current[userId] = peerConnection;
+
+    try {
+      await peerConnection.setRemoteDescription(offer);
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+
+      console.log('📤 Sending answer to:', userId);
+      if (socket) {
+        socket.emit('answer', {
+          targetUserId: userId,
+          answer: answer
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error handling offer:', error);
     }
   };
 
   const handleAnswer = async (userId: string, answer: RTCSessionDescriptionInit) => {
+    console.log('📥 Received answer from:', userId);
     const peerConnection = peerConnections.current[userId];
     if (peerConnection) {
-      await peerConnection.setRemoteDescription(answer);
+      try {
+        await peerConnection.setRemoteDescription(answer);
+        console.log('✅ Answer processed successfully');
+      } catch (error) {
+        console.error('❌ Error handling answer:', error);
+      }
     }
   };
 
   const handleIceCandidate = async (userId: string, candidate: RTCIceCandidateInit) => {
+    console.log('📥 Received ICE candidate from:', userId);
     const peerConnection = peerConnections.current[userId];
     if (peerConnection) {
-      await peerConnection.addIceCandidate(candidate);
+      try {
+        await peerConnection.addIceCandidate(candidate);
+        console.log('✅ ICE candidate added successfully');
+      } catch (error) {
+        console.error('❌ Error handling ICE candidate:', error);
+      }
     }
   };
 
