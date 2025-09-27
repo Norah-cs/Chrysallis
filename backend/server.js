@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import bcrypt from "bcrypt";
 import { insertNewUser } from "./insertUser.js"; // MongoDB insertion function
 
 const app = express();
@@ -18,6 +19,30 @@ app.post("/api/register", async (req, res) => {
       console.error(err);
       res.status(500).json({ message: "Server error" });
     }
+  }
+});
+
+app.post("/api/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const db = client.db("UserData");
+    const users = db.collection("users");
+
+    const user = await users.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid email or password" });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: "Invalid email or password" });
+    }
+
+    res.json({ message: "Login successful", id: user._id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
