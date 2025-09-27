@@ -60,6 +60,6 @@ async function generateAudio(question) {
    const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
    const audioBuffer = Buffer.from(data, 'base64');
 
-   const fileName = 'out.wav';
+   const fileName = 'question.wav';
    await saveWaveFile(fileName, audioBuffer);
 }

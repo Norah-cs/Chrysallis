@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 export const GenerateAudio: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const playWav = () => {
-        const audio = new Audio("../../backend/out.wav"); // place file in public/audio/
+        const audio = new Audio("../../backend/question.wav"); // place file in public/audio/
         audio.play();
     };
     const handleAudio = async () => {
