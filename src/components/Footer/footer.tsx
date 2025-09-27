@@ -109,7 +109,7 @@ export const Footer: React.FC = () => {
         {/* Bottom Section */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="text-center">
-                <p className="text-gray-500 text-sm mb-2"> 
+                <p className="text-gray-500 text-sm mt-4 py-4"> 
                     © {currentYear} Chrysallis. All rights reserved.
                 </p>
                 <p className="text-gray-500 text-sm flex items-center justify-center"> 

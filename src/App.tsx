@@ -5,6 +5,7 @@ import HomePage from "./components/pages/HomePage";
 import Rooms from "./components/pages/Rooms";
 import Features from "./components/pages/Features";
 import Profile from "./components/pages/Profile";
+import { RegistrationPage } from "./components/pages/RegistrationPage";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <main className="container mx-auto px-4 py-8">
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/register" element={<RegistrationPage onBack={() => window.history.back()} />} />
             <Route path="/rooms" element={<Rooms />} />
             <Route path="/features" element={<Features />} />
             <Route path="/profile" element={<Profile />} />

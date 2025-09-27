@@ -1,11 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Sparkles, Users, Target, Award, ChevronRight } from 'lucide-react';
 
-interface HomePageProps {
-  onGetStarted: () => void;
-}
-
-export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
+export const HomePage: React.FC = () => {
+  const navigate = useNavigate();
   const features = [
     {
       icon: <Users className="w-8 h-8" />,
@@ -53,7 +51,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
           we help you emerge as a confident professional.
         </p>
         <button
-          onClick={onGetStarted}
+          onClick={() => navigate('/register')}
           className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 group"
         >
           Begin Your Transformation
@@ -165,17 +163,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
             <h2 className="text-4xl font-bold mb-4">
               Ready to Spread Your Wings?
             </h2>
-            <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
+            <p className="text-xl opacity-90 max-w-2xl mx-auto">
               Join thousands of students who have transformed their careers with Chrysalis. 
               Your journey from student to professional starts here.
             </p>
-            <button
-              onClick={onGetStarted}
-              className="inline-flex items-center px-10 py-4 bg-white text-purple-600 font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 group"
-            >
-              Start Registration
-              <ChevronRight className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
-            </button>
           </div>
         </section>
       </div>
