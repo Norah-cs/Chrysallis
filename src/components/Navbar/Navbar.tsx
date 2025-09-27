@@ -19,10 +19,12 @@ function Navbar() {
           {/* Logo/Brand */}
           <div className="flex items-center">
             <div className="flex-shrink-0">
-                <img 
-                src="/assets/chrysallis-logo.png" 
-                alt="Chrysallis"
-                className="h-14 w-auto" />
+                <a href="/">
+                  <img 
+                  src="/assets/chrysallis-logo.png" 
+                  alt="Chrysallis"
+                  className="h-14 w-auto" />
+                </a>
             </div>
           </div>
 
