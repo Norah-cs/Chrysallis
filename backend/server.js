@@ -360,13 +360,19 @@ async function matchExistingUsers(roomId) {
     const connectedUsers = [];
     for (const user of users) {
       const socket = io.sockets.sockets.get(user.socketId);
-      if (socket && socket.connected) {
+      console.log(`🔍 Checking connection for ${user.name} (${user.socketId}):`);
+      console.log(`   Socket exists: ${!!socket}`);
+      console.log(`   Socket connected: ${socket?.connected}`);
+      console.log(`   Socket ID: ${socket?.id}`);
+      console.log(`   Socket rooms: ${socket?.rooms ? Array.from(socket.rooms) : 'none'}`);
+      
+      // More lenient connection check - if socket exists, assume it's connected
+      // This prevents false positives where socket.connected might be temporarily false
+      if (socket) {
         connectedUsers.push(user);
         console.log(`✅ User ${user.name} (${user.socketId}) is still connected`);
       } else {
-        console.log(`❌ User ${user.name} (${user.socketId}) is not connected, removing from waiting list`);
-        console.log(`   Socket exists: ${!!socket}`);
-        console.log(`   Socket connected: ${socket?.connected}`);
+        console.log(`❌ User ${user.name} (${user.socketId}) socket not found, removing from waiting list`);
         await removeUserFromWaitingList(user.socketId);
       }
     }
@@ -451,6 +457,11 @@ async function matchExistingUsers(roomId) {
       console.log(`✅ Match notifications sent to both users`);
     } else {
       console.log(`❌ No compatible matches found among existing users`);
+      // If no matches found, wait a bit and try again
+      setTimeout(async () => {
+        console.log(`🔄 Retrying match for room ${roomId}...`);
+        await matchExistingUsers(roomId);
+      }, 2000);
     }
     
   } catch (error) {
