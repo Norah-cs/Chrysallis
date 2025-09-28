@@ -5,6 +5,7 @@ import LogoLoop from "../LogoLoop/LogoLoop";
 import TiltedCard from "../Logo/Logo";
 import { StoreImages } from "../LogoLoop/StoreImages";
 import { useNavigate } from 'react-router-dom';
+import CountUp from "../UIComponents/CountUp";
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -108,19 +109,43 @@ export const HomePage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
           <div>
             <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
-              1000+
+              <CountUp
+                from={0}
+                to={367}
+                separator=","
+                direction="up"
+                duration={1}
+                className="count-up-text"
+              />
+              <span>+</span>
             </div>
             <div className="text-gray-600 font-medium">Students Transformed</div>
           </div>
           <div>
             <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
-              500+
+              <CountUp
+                from={0}
+                to={22}
+                separator=","
+                direction="up"
+                duration={1}
+                className="count-up-text"
+              />
+              <span>+</span>
             </div>
             <div className="text-gray-600 font-medium">Universities Reached</div>
           </div>
           <div>
             <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
-              95%
+              <CountUp
+                from={0}
+                to={95}
+                separator="%"
+                direction="up"
+                duration={1}
+                className="count-up-text"
+              />
+              <span>%</span>
             </div>
             <div className="text-gray-600 font-medium">Success Rate</div>
           </div>
