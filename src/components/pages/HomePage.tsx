@@ -6,6 +6,7 @@ import TiltedCard from "../Logo/Logo";
 import { StoreImages } from "../LogoLoop/StoreImages";
 import { useNavigate } from 'react-router-dom';
 import CountUp from "../UIComponents/CountUp";
+import CircularGallery from "./CircularGallery/CircularGallery";
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -152,6 +153,10 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
       
+      {/* Circular Gallery Section */}
+      <div style={{ height: '600px', position: 'relative' }}>
+        <CircularGallery bend={0} textColor="#ffffff" borderRadius={0.05} scrollEase={0.02}/>
+      </div>
 
         {/* CTA Section */}
         <section className="text-center">
