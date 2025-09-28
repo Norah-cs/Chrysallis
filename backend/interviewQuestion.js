@@ -8,8 +8,9 @@ dotenv.config({ path: path.resolve("../.env") });
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export async function generateQuestionAudio() {
-    const question = await generateQuestion();
-    await generateAudio(question);
+   const question = await generateQuestion();
+   await generateAudio(question);
+   return question;
 }
 
 async function generateQuestion() {
@@ -17,6 +18,7 @@ async function generateQuestion() {
     model: "gemini-2.5-flash",
     contents: "Give one behavioural based interview question for a software developer role. Just the question, nothing else",
   });
+  console.log(response.text);
   return response.text;
 }
 

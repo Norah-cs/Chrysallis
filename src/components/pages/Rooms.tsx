@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Users, Clock, Code, MessageSquare, Briefcase, Search, Sparkles, Target, TrendingUp } from "lucide-react";
 import VideoChatRoom from '../shared/VideoChatRoom';
 import { FormData } from '../../types';
+import GenerateAudio from "../shared/GenerateAudio";
 
 function Rooms() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -29,6 +30,14 @@ function Rooms() {
     { id: "behavioral", label: "Behavioral", icon: MessageSquare },
     { id: "career", label: "Career Prep", icon: Briefcase }
   ];
+
+  useEffect(() => {
+    if (isInVideoChat) {
+      document.body.style.overflow = "hidden";  // disable scroll
+    } else {
+      document.body.style.overflow = "auto";    // restore scroll
+    }
+  }, [isInVideoChat]);
 
   const rooms = [
     {
@@ -320,11 +329,20 @@ function Rooms() {
 
       {/* Video Chat Room */}
       {isInVideoChat && userData && (
-        <VideoChatRoom
-          roomId={currentRoomId}
-          userData={userData}
-          onLeave={handleLeaveVideoChat}
-        />
+        <div className="relative">
+          <VideoChatRoom
+            roomId={currentRoomId}
+            userData={userData}
+            onLeave={handleLeaveVideoChat}
+          />
+
+          {currentRoomId === "3" && (
+            <div className="fixed bottom-[1rem] left-6 z-50">
+              <GenerateAudio />
+            </div>
+          )}
+          
+        </div>
       )}
     </div>
   );
