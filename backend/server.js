@@ -119,6 +119,7 @@ io.on('connection', (socket) => {
       // Try to match existing waiting users with this new user
       console.log(`🔍 Looking for matches...`);
       setTimeout(async () => {
+        console.log(`🔍 Attempting to match users in room ${roomId}...`);
         await matchExistingUsers(roomId);
       }, 100); // Small delay to ensure socket connection is stable
     } catch (error) {
@@ -184,9 +185,9 @@ io.on('connection', (socket) => {
   });
 
   // Handle disconnect
-  socket.on('disconnect', async () => {
+  socket.on('disconnect', async (reason) => {
     const userId = socket.id;
-    console.log('User disconnected:', userId);
+    console.log('User disconnected:', userId, 'Reason:', reason);
     
     try {
       // Remove from waiting users in database
@@ -321,16 +322,34 @@ async function matchExistingUsers(roomId) {
       return;
     }
     
-    // Try to find the best match among all waiting users
+    // Check if all users are still connected
+    const connectedUsers = [];
+    for (const user of users) {
+      const socket = io.sockets.sockets.get(user.socketId);
+      if (socket && socket.connected) {
+        connectedUsers.push(user);
+        console.log(`✅ User ${user.name} (${user.socketId}) is still connected`);
+      } else {
+        console.log(`❌ User ${user.name} (${user.socketId}) is not connected, removing from waiting list`);
+        await removeUserFromWaitingList(user.socketId);
+      }
+    }
+    
+    if (connectedUsers.length < 2) {
+      console.log(`❌ Not enough connected users to match (need at least 2, found ${connectedUsers.length})`);
+      return;
+    }
+    
+    // Try to find the best match among connected users
     let bestMatch = null;
     let bestScore = 0;
     let bestUser1 = null;
     let bestUser2 = null;
     
-    for (let i = 0; i < users.length; i++) {
-      for (let j = i + 1; j < users.length; j++) {
-        const user1 = users[i];
-        const user2 = users[j];
+    for (let i = 0; i < connectedUsers.length; i++) {
+      for (let j = i + 1; j < connectedUsers.length; j++) {
+        const user1 = connectedUsers[i];
+        const user2 = connectedUsers[j];
         
         // Calculate compatibility score
         const score = calculateCompatibilityScore(user1, user2);
