@@ -11,7 +11,6 @@ function Rooms() {
   const [isInVideoChat, setIsInVideoChat] = useState(false);
   const [currentRoomId, setCurrentRoomId] = useState("");
   const [userData, setUserData] = useState<FormData | null>(null);
-  const [isTimerOpen, setIsTimerOpen] = useState(false);
 
   // Load user data from localStorage
   useEffect(() => {
@@ -159,11 +158,6 @@ function Rooms() {
     setCurrentRoomId("");
   };
 
-// Function to check if room is Elevator Pitch Practice
-  const isElevatorPitchRoom = (roomName: string) => {
-    return roomName === "Elevator Pitch Practice";
-  };
-
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -291,19 +285,6 @@ function Rooms() {
                 </div>
               </div>
 
-              {/* Elevator Pitch Timer Button - Only shows for Elevator Pitch room */}
-              {isElevatorPitchRoom(room.name) && (
-                <div className="mb-4">
-                  <button
-                    onClick={() => setIsTimerOpen(true)}
-                    className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2 text-sm"
-                  >
-                    <Timer className="w-4 h-4" />
-                    Open Practice Timer
-                  </button>
-                </div>
-              )}
-
               {/* Join Button */}
               <button 
                 onClick={() => handleJoinRoom(room.id.toString())}
@@ -347,12 +328,6 @@ function Rooms() {
         </div>
       </div>
 
-      {/* Timer Modal - Only renders when open */}
-      <ElevatorPitchTimer 
-        isOpen={isTimerOpen}
-        onClose={() => setIsTimerOpen(false)}
-      />
-
       {/* Video Chat Room */}
       {isInVideoChat && userData && (
         <div className="relative">
@@ -361,6 +336,13 @@ function Rooms() {
             userData={userData}
             onLeave={handleLeaveVideoChat}
           />
+
+        {/* Elevator Pitch Timer */}
+          {currentRoomId === "2" && (
+            <div className="fixed bottom-6 left-6 z-50">
+              <ElevatorPitchTimer />
+            </div>
+          )}
 
           {currentRoomId === "3" && (
             <div className="fixed bottom-[1rem] left-6 z-50">
