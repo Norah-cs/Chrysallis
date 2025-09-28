@@ -4,28 +4,53 @@ import { MongoClient } from "mongodb";
 
 dotenv.config({ path: path.resolve("../.env") });
 
-const client = new MongoClient(process.env.MONGO_URI, {
-  serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-  socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-  maxPoolSize: 10, // Maintain up to 10 socket connections
-  minPoolSize: 5, // Maintain a minimum of 5 socket connections
-  maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
-  connectTimeoutMS: 10000, // Give up initial connection after 10 seconds
-  retryWrites: true,
-  retryReads: true,
-});
+// In-memory storage as fallback when MongoDB is unavailable
+let inMemoryStorage = {
+  waitingUsers: new Map(),
+  matchedRooms: new Map(),
+  users: new Map()
+};
 
-// Connect to MongoDB
+let client = null;
+let useInMemory = false;
+
+// Try to create MongoDB client, fall back to in-memory if it fails
+try {
+  if (process.env.MONGO_URI) {
+    client = new MongoClient(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      minPoolSize: 5,
+      maxIdleTimeMS: 30000,
+      connectTimeoutMS: 10000,
+      retryWrites: true,
+      retryReads: true,
+    });
+  } else {
+    console.log('⚠️ No MONGO_URI found, using in-memory storage');
+    useInMemory = true;
+  }
+} catch (error) {
+  console.log('⚠️ MongoDB client creation failed, using in-memory storage:', error.message);
+  useInMemory = true;
+}
+
+// Connect to MongoDB or return in-memory storage
 async function connectToDB() {
+  if (useInMemory) {
+    return inMemoryStorage;
+  }
+  
   try {
-    if (!client.topology || !client.topology.isConnected()) {
+    if (!client || !client.topology || !client.topology.isConnected()) {
       await client.connect();
     }
     return client.db("UserData");
   } catch (error) {
-    console.error('Error connecting to MongoDB:', error);
-    // Don't throw error, return null instead
-    return null;
+    console.error('Error connecting to MongoDB, switching to in-memory storage:', error.message);
+    useInMemory = true;
+    return inMemoryStorage;
   }
 }
 
@@ -35,6 +60,10 @@ export async function getUserByEmail(email) {
   if (!db) {
     console.error('Database connection failed');
     return null;
+  }
+  
+  if (useInMemory) {
+    return db.users.get(email) || null;
   }
   
   const users = db.collection("users");
@@ -54,6 +83,13 @@ export async function getWaitingUsersInRoom(roomId) {
   if (!db) {
     console.error('Database connection failed');
     return [];
+  }
+  
+  if (useInMemory) {
+    const users = Array.from(db.waitingUsers.values()).filter(user => 
+      user.roomId === roomId && user.status === 'waiting'
+    );
+    return users;
   }
   
   const waitingUsers = db.collection("waitingUsers");
@@ -78,11 +114,38 @@ export async function addUserToWaitingList(userData) {
     return null;
   }
   
+  console.log(`📝 Adding user to waiting list: ${userData.name} (${userData.socketId})`);
+  
+  if (useInMemory) {
+    // Remove user if already waiting (in case of reconnection)
+    if (db.waitingUsers.has(userData.socketId)) {
+      console.log(`🗑️ Removed existing waiting user: ${userData.socketId}`);
+    }
+    
+    // Add user to waiting list
+    const userWithStatus = {
+      ...userData,
+      status: 'waiting',
+      joinedAt: new Date()
+    };
+    
+    db.waitingUsers.set(userData.socketId, userWithStatus);
+    console.log(`✅ User added to waiting list (in-memory)`);
+    
+    // Verify the user was added
+    const verifyUser = db.waitingUsers.get(userData.socketId);
+    if (verifyUser) {
+      console.log(`✅ Verification: User found in waiting list`);
+    } else {
+      console.log(`❌ Verification failed: User not found in waiting list`);
+    }
+    
+    return { insertedId: userData.socketId };
+  }
+  
   const waitingUsers = db.collection("waitingUsers");
   
   try {
-    console.log(`📝 Adding user to waiting list: ${userData.name} (${userData.socketId})`);
-    
     // Remove user if already waiting (in case of reconnection)
     const deleteResult = await waitingUsers.deleteOne({ socketId: userData.socketId });
     if (deleteResult.deletedCount > 0) {
@@ -119,6 +182,15 @@ export async function removeUserFromWaitingList(socketId) {
   if (!db) {
     console.error('Database connection failed, cannot remove user from waiting list');
     return null;
+  }
+  
+  if (useInMemory) {
+    const existed = db.waitingUsers.has(socketId);
+    if (existed) {
+      db.waitingUsers.delete(socketId);
+      console.log(`🗑️ Removed user from waiting list (in-memory): ${socketId}`);
+    }
+    return { deletedCount: existed ? 1 : 0 };
   }
   
   const waitingUsers = db.collection("waitingUsers");
@@ -184,6 +256,15 @@ export async function getPotentialMatches(currentUser, roomId) {
   if (!db) {
     console.error('Database connection failed, cannot get potential matches');
     return [];
+  }
+  
+  if (useInMemory) {
+    const users = Array.from(db.waitingUsers.values()).filter(user => 
+      user.roomId === roomId && 
+      user.status === 'waiting' && 
+      user.socketId !== currentUser.socketId
+    );
+    return users;
   }
   
   const waitingUsers = db.collection("waitingUsers");
@@ -287,6 +368,21 @@ export async function cleanupOldWaitingUsers() {
   if (!db) {
     console.error('Database connection failed, cannot cleanup old waiting users');
     return null;
+  }
+  
+  if (useInMemory) {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    let deletedCount = 0;
+    
+    for (const [socketId, user] of db.waitingUsers.entries()) {
+      if (user.joinedAt < fiveMinutesAgo) {
+        db.waitingUsers.delete(socketId);
+        deletedCount++;
+      }
+    }
+    
+    console.log(`Cleaned up ${deletedCount} old waiting users (in-memory)`);
+    return { deletedCount };
   }
   
   const waitingUsers = db.collection("waitingUsers");
