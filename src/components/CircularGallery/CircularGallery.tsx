@@ -1,5 +1,6 @@
 import { Camera, Mesh, Plane, Program, Renderer, Texture, Transform } from 'ogl';
 import { useEffect, useRef } from 'react';
+import { StoreReviews } from './StoreReviews';
 
 type GL = Renderer['gl'];
 
@@ -363,7 +364,7 @@ class Media {
       }
     }
     this.scale = this.screen.height / 1500;
-    this.plane.scale.y = (this.viewport.height * (900 * this.scale)) / this.screen.height;
+    this.plane.scale.y = (this.viewport.height * (700 * this.scale)) / this.screen.height;
     this.plane.scale.x = (this.viewport.width * (700 * this.scale)) / this.screen.width;
     this.plane.program.uniforms.uPlaneSizes.value = [this.plane.scale.x, this.plane.scale.y];
     this.padding = 2;
@@ -455,7 +456,7 @@ class App {
   createCamera() {
     this.camera = new Camera(this.gl);
     this.camera.fov = 45;
-    this.camera.position.z = 20;
+    this.camera.position.z = 15;
   }
 
   createScene() {
@@ -476,7 +477,7 @@ class App {
     borderRadius: number,
     font: string
   ) {
-    const defaultItems = [
+    /*const defaultItems = [
       {
         image: `https://picsum.photos/seed/1/800/600?grayscale`,
         text: 'Bridge'
@@ -499,10 +500,22 @@ class App {
       },
       {
         image: `https://picsum.photos/seed/12/800/600?grayscale`
-      }
-    ];
-    const galleryItems = items && items.length ? items : defaultItems;
-    this.mediasImages = galleryItems.concat(galleryItems);
+      }*/
+    //];
+    const galleryItems = items && items.length ? items : StoreReviews;
+    // Ensure all items have 'image' and 'text' properties
+    const normalizedItems = galleryItems
+      .map(item => {
+        if ('image' in item && 'text' in item) {
+          return item;
+        } else if ('src' in item && 'alt' in item) {
+          return { image: item.src, text: item.alt };
+        }
+        return null;
+      })
+      .filter((item): item is { image: string; text: string } => !!item);
+
+    this.mediasImages = normalizedItems.concat(normalizedItems);
     this.medias = this.mediasImages.map((data, index) => {
       return new Media({
         geometry: this.planeGeometry,
