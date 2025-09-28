@@ -54,6 +54,7 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
     newSocket.on('connect', () => {
       console.log('🔌 Connected to server with socket ID:', newSocket.id);
+      console.log('🔌 Connection timestamp:', new Date().toISOString());
       setIsConnected(true);
       
       // Join room with user data for matching
@@ -92,7 +93,9 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
     newSocket.on('user-matched', (matchedUserData) => {
       console.log('🎉 USER MATCHED EVENT RECEIVED:', matchedUserData);
+      console.log('🎉 Match timestamp:', new Date().toISOString());
       console.log('Current socket ID:', newSocket.id);
+      console.log('Matched user ID:', matchedUserData.id);
       console.log('Local stream status at match:', {
         exists: !!localStreamRef.current,
         active: localStreamRef.current?.active,
@@ -105,7 +108,14 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       const waitForLocalStream = () => {
         if (localStreamRef.current && localStreamRef.current.active) {
           console.log('🔗 Local stream is ready, starting peer connection...');
-          initiatePeerConnection(matchedUserData.id);
+          console.log('🔗 Starting WebRTC connection for user:', matchedUserData.id);
+          
+          // Add a small random delay to prevent both users from initiating simultaneously
+          const delay = Math.random() * 1000; // 0-1000ms random delay
+          console.log(`🔗 Adding ${delay.toFixed(0)}ms delay to prevent race condition`);
+          setTimeout(() => {
+            initiatePeerConnection(matchedUserData.id);
+          }, delay);
         } else if (!localStreamRef.current) {
           console.log('⚠️ No local stream available...');
           setTimeout(waitForLocalStream, 500);
@@ -137,6 +147,7 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
     newSocket.on('offer', async (data) => {
       console.log('📥 Received offer from:', data.userId);
+      console.log('📥 Offer timestamp:', new Date().toISOString());
       console.log('📥 Offer details:', {
         type: data.offer.type,
         sdp: data.offer.sdp?.substring(0, 100) + '...'
@@ -146,6 +157,7 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
     newSocket.on('answer', async (data) => {
       console.log('📥 Received answer from:', data.userId);
+      console.log('📥 Answer timestamp:', new Date().toISOString());
       console.log('📥 Answer details:', {
         type: data.answer.type,
         sdp: data.answer.sdp?.substring(0, 100) + '...'
@@ -155,6 +167,7 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
     newSocket.on('ice-candidate', async (data) => {
       console.log('🧊 Received ICE candidate from:', data.userId);
+      console.log('🧊 ICE candidate timestamp:', new Date().toISOString());
       console.log('🧊 ICE candidate details:', {
         candidate: data.candidate.candidate,
         sdpMLineIndex: data.candidate.sdpMLineIndex,
@@ -383,10 +396,12 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
     peerConnection.onicecandidate = (event) => {
       if (event.candidate && socketRef.current) {
         console.log('🧊 Sending ICE candidate to:', userId);
+        console.log('🧊 ICE candidate timestamp:', new Date().toISOString());
         socketRef.current.emit('ice-candidate', {
           targetUserId: userId,
           candidate: event.candidate
         });
+        console.log('✅ ICE candidate sent successfully');
       }
     };
 
@@ -456,6 +471,7 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       await peerConnection.setLocalDescription(offer);
       
       console.log('📤 Sending offer to:', userId);
+      console.log('📤 Offer timestamp:', new Date().toISOString());
       console.log('📤 Offer details:', {
         type: offer.type,
         sdp: offer.sdp?.substring(0, 100) + '...'
@@ -479,6 +495,7 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
   const handleOffer = async (userId: string, offer: RTCSessionDescriptionInit) => {
     console.log('📥 Received offer from:', userId);
+    console.log('📥 Current peer connection state:', peerConnections.current[userId]?.signalingState);
     
     // Check if local stream is available
     if (!localStreamRef.current) {
@@ -498,40 +515,82 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       return;
     }
     
+    // Check if we already have a connection for this user
+    if (peerConnections.current[userId]) {
+      console.log('⚠️ Peer connection already exists for user:', userId);
+      // Close existing connection and create new one
+      peerConnections.current[userId].close();
+    }
+    
     const peerConnection = createPeerConnection(userId);
     peerConnections.current[userId] = peerConnection;
 
     try {
-      await peerConnection.setRemoteDescription(offer);
-      const answer = await peerConnection.createAnswer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true
-      });
-      await peerConnection.setLocalDescription(answer);
+      // Check if we're in the right state to set remote description
+      if (peerConnection.signalingState === 'stable') {
+        await peerConnection.setRemoteDescription(offer);
+        const answer = await peerConnection.createAnswer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true
+        });
+        await peerConnection.setLocalDescription(answer);
 
-      console.log('📤 Sending answer to:', userId);
-      console.log('📤 Answer details:', {
-        type: answer.type,
-        sdp: answer.sdp?.substring(0, 100) + '...'
-      });
-      socketRef.current!.emit('answer', {
-        targetUserId: userId,
-        answer: answer
-      });
+        console.log('📤 Sending answer to:', userId);
+        console.log('📤 Answer details:', {
+          type: answer.type,
+          sdp: answer.sdp?.substring(0, 100) + '...'
+        });
+        socketRef.current!.emit('answer', {
+          targetUserId: userId,
+          answer: answer
+        });
+      } else {
+        console.log('⚠️ Cannot set remote offer, wrong signaling state:', peerConnection.signalingState);
+      }
     } catch (error) {
       console.error('❌ Error handling offer:', error);
+      // If there's an error, try to restart the connection
+      console.log('🔄 Restarting peer connection due to error');
+      peerConnection.close();
+      delete peerConnections.current[userId];
+      setTimeout(() => {
+        handleOffer(userId, offer);
+      }, 1000);
     }
   };
 
   const handleAnswer = async (userId: string, answer: RTCSessionDescriptionInit) => {
     console.log('📥 Received answer from:', userId);
+    console.log('📥 Current peer connection state:', peerConnections.current[userId]?.signalingState);
     const peerConnection = peerConnections.current[userId];
     if (peerConnection) {
       try {
-        await peerConnection.setRemoteDescription(answer);
-        console.log('✅ Answer processed successfully');
+        // Check if we're in the right state to set remote description
+        if (peerConnection.signalingState === 'have-local-offer') {
+          await peerConnection.setRemoteDescription(answer);
+          console.log('✅ Answer processed successfully');
+        } else {
+          console.log('⚠️ Cannot set remote answer, wrong signaling state:', peerConnection.signalingState);
+          // If we're in stable state, we might need to restart the connection
+          if (peerConnection.signalingState === 'stable') {
+            console.log('🔄 Restarting peer connection due to signaling state mismatch');
+            // Close existing connection and restart
+            peerConnection.close();
+            delete peerConnections.current[userId];
+            setTimeout(() => {
+              initiatePeerConnection(userId);
+            }, 1000);
+          }
+        }
       } catch (error) {
         console.error('❌ Error handling answer:', error);
+        // If there's an error, try to restart the connection
+        console.log('🔄 Restarting peer connection due to error');
+        peerConnection.close();
+        delete peerConnections.current[userId];
+        setTimeout(() => {
+          initiatePeerConnection(userId);
+        }, 1000);
       }
     }
   };
