@@ -60,8 +60,10 @@ function Features() {
     <div className="space-y-16">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Powerful Features</h1>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+        <h1 className="text-4xl font-bold mt-2 bg-gradient-to-r from-purple-600 to-support1 bg-clip-text text-transparent">
+            Powerful Features
+          </h1>
+        <p className="text-lg text-gray-600 max-w-3xl mx-auto mt-2 mb-2">
           Discover all the tools and features that make Chrysalis the perfect platform for your educational journey
         </p>
       </div>

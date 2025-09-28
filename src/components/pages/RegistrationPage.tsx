@@ -234,7 +234,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
             <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
               Name *
             </label>
-            <input
+            <input autoComplete="off"
               type="text"
               id="name"
               className={`w-full rounded-xl border-2 shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 p-3 ${
@@ -251,7 +251,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
               <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
                 Email *
               </label>
-              <input
+              <input autoComplete="off"
                 type="email"
                 id="email"
                 className={`w-full rounded-xl border-2 shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 p-3 ${
@@ -267,7 +267,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
               <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
                 Password *
               </label>
-              <input
+              <input autoComplete="off"
                 type="text"
                 id="password"
                 className={`w-full rounded-xl border-2 shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 p-3 ${
@@ -287,7 +287,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
               <label htmlFor="university" className="block text-sm font-semibold text-gray-700 mb-2">
                 University
               </label>
-              <input
+              <input autoComplete="off"
                 type="text"
                 id="university"
                 className="w-full rounded-xl border-2 border-gray-300 shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 p-3"
@@ -489,7 +489,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
                   <label htmlFor={key} className="block text-sm font-medium text-gray-600 mb-1 capitalize">
                     {getSocialIcon(key)} {key}
                   </label>
-                  <input
+                  <input autoComplete="off"
                     type="text"
                     id={key}
                     className="w-full rounded-xl border-2 border-gray-300 shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 p-3"
