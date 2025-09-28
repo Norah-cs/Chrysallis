@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { insertNewUser } from "./insertUser.js"; // MongoDB insertion function
+import { generateQuestionAudio } from "./interviewQuestion.js";
 import { 
   addUserToWaitingList, 
   removeUserFromWaitingList, 
@@ -23,12 +24,12 @@ const io = new Server(server, {
 });
 
 app.use(cors());
-app.use(express.json()); // parses JSON body
+app.use(express.json());
 
 // Clean up old waiting users every 10 minutes
 setInterval(cleanupOldWaitingUsers, 10 * 60 * 1000);
 
-// This is the route your React form hits
+// Register new user
 app.post("/api/register", async (req, res) => {
   try {
     const result = await insertNewUser(req.body); // req.body is your formData
@@ -43,6 +44,7 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
+// User login
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -66,6 +68,19 @@ app.post("/api/login", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// Generate interview question
+app.post("/api/genq", async (req, res) => {
+  try {
+    const result = await generateQuestionAudio();
+    // send the result back to the client
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
