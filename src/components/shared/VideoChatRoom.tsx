@@ -93,8 +93,9 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       
       // Start WebRTC connection with the matched user (with delay to ensure local stream is ready)
       setTimeout(() => {
+        console.log('🔗 Starting peer connection after match...');
         initiatePeerConnection(matchedUserData.id);
-      }, 500);
+      }, 1000); // Increased delay to ensure everything is ready
     });
 
     newSocket.on('user-left', (userId) => {
@@ -161,18 +162,45 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
+  // Handle remote streams when they change
+  useEffect(() => {
+    Object.entries(remoteStreams).forEach(([userId, stream]) => {
+      const videoElement = remoteVideoRefs.current[userId];
+      if (videoElement && stream && videoElement.srcObject !== stream) {
+        videoElement.srcObject = stream;
+        console.log('📹 Remote stream updated for user:', userId);
+      }
+    });
+  }, [remoteStreams]);
+
   const initializeLocalStream = async () => {
     try {
       console.log('🎥 Requesting camera and microphone access...');
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
+        video: { 
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 }
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
       });
       console.log('✅ Camera and microphone access granted');
       setLocalStream(stream);
+      
+      // Set up local video element
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
         console.log('📹 Local video stream set');
+        
+        // Ensure video plays
+        localVideoRef.current.onloadedmetadata = () => {
+          console.log('📹 Local video metadata loaded');
+          localVideoRef.current?.play().catch(console.error);
+        };
       }
     } catch (error) {
       console.error('❌ Error accessing media devices:', error);
@@ -201,10 +229,20 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
     peerConnection.ontrack = (event) => {
       console.log('📹 Received remote stream from:', userId);
+      const remoteStream = event.streams[0];
       setRemoteStreams(prev => ({
         ...prev,
-        [userId]: event.streams[0]
+        [userId]: remoteStream
       }));
+      
+      // Ensure the video element gets the stream
+      setTimeout(() => {
+        const videoElement = remoteVideoRefs.current[userId];
+        if (videoElement && remoteStream) {
+          videoElement.srcObject = remoteStream;
+          console.log('📹 Remote video stream assigned to video element');
+        }
+      }, 100);
     };
 
     peerConnection.onicecandidate = (event) => {
@@ -219,10 +257,24 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
     peerConnection.onconnectionstatechange = () => {
       console.log(`🔗 Peer connection state with ${userId}:`, peerConnection.connectionState);
+      if (peerConnection.connectionState === 'failed') {
+        console.log('❌ Peer connection failed, attempting to restart...');
+        // Attempt to restart the connection
+        setTimeout(() => {
+          if (socket && matchedUser) {
+            initiatePeerConnection(userId);
+          }
+        }, 2000);
+      }
     };
 
     peerConnection.oniceconnectionstatechange = () => {
       console.log(`🧊 ICE connection state with ${userId}:`, peerConnection.iceConnectionState);
+      if (peerConnection.iceConnectionState === 'failed') {
+        console.log('❌ ICE connection failed, attempting to restart...');
+        // Attempt to restart ICE gathering
+        peerConnection.restartIce();
+      }
     };
 
     return peerConnection;
@@ -240,23 +292,40 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       return;
     }
     
+    // Check if socket is available
+    if (!socket) {
+      console.log('⚠️ Socket not available, waiting...');
+      setTimeout(() => {
+        initiatePeerConnection(userId);
+      }, 1000);
+      return;
+    }
+    
     const peerConnection = createPeerConnection(userId);
     peerConnections.current[userId] = peerConnection;
 
     try {
       // Create and send offer
-      const offer = await peerConnection.createOffer();
+      const offer = await peerConnection.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true
+      });
       await peerConnection.setLocalDescription(offer);
       
       console.log('📤 Sending offer to:', userId);
-      if (socket) {
-        socket.emit('offer', {
-          targetUserId: userId,
-          offer: offer
-        });
-      }
+      socket.emit('offer', {
+        targetUserId: userId,
+        offer: offer
+      });
     } catch (error) {
       console.error('❌ Error creating offer:', error);
+      // Retry after a delay
+      setTimeout(() => {
+        if (socket && matchedUser) {
+          console.log('🔄 Retrying peer connection...');
+          initiatePeerConnection(userId);
+        }
+      }, 2000);
     }
   };
 
@@ -272,21 +341,31 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       return;
     }
     
+    // Check if socket is available
+    if (!socket) {
+      console.log('⚠️ Socket not available when handling offer, waiting...');
+      setTimeout(() => {
+        handleOffer(userId, offer);
+      }, 1000);
+      return;
+    }
+    
     const peerConnection = createPeerConnection(userId);
     peerConnections.current[userId] = peerConnection;
 
     try {
       await peerConnection.setRemoteDescription(offer);
-      const answer = await peerConnection.createAnswer();
+      const answer = await peerConnection.createAnswer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true
+      });
       await peerConnection.setLocalDescription(answer);
 
       console.log('📤 Sending answer to:', userId);
-      if (socket) {
-        socket.emit('answer', {
-          targetUserId: userId,
-          answer: answer
-        });
-      }
+      socket.emit('answer', {
+        targetUserId: userId,
+        answer: answer
+      });
     } catch (error) {
       console.error('❌ Error handling offer:', error);
     }
@@ -435,18 +514,43 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
                     ref={(el) => {
                       if (el) {
                         remoteVideoRefs.current[userId] = el;
-                        el.srcObject = stream;
+                        if (stream && el.srcObject !== stream) {
+                          el.srcObject = stream;
+                          console.log('📹 Remote video stream set for user:', userId);
+                        }
                       }
                     }}
                     autoPlay
                     playsInline
                     className="w-full h-full object-cover"
+                    onLoadedMetadata={() => {
+                      console.log('📹 Remote video metadata loaded for user:', userId);
+                    }}
+                    onCanPlay={() => {
+                      console.log('📹 Remote video can play for user:', userId);
+                    }}
                   />
                   <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
                     {matchedUser?.name || 'Remote User'}
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+          
+          {/* Show local video even while waiting for match */}
+          {isWaitingForMatch && localStream && (
+            <div className="absolute bottom-4 right-4 w-48 h-36 bg-gray-800 rounded-lg overflow-hidden border-2 border-purple-500">
+              <video
+                ref={localVideoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white px-1 py-0.5 rounded text-xs">
+                You
+              </div>
             </div>
           )}
         </div>
