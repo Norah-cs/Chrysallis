@@ -13,6 +13,7 @@ import {
   removeMatchedRoom,
   cleanupOldWaitingUsers
 } from "./userMatching.js";
+import { generateCodingQuestion } from "./codingQuestion.js";
 
 const app = express();
 const server = createServer(app);
@@ -100,6 +101,16 @@ app.post("/api/genq", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/genCoding", async (req, res) => {
+  try {
+    const result = await generateCodingQuestion();
+    res.status(200).json({ success: true, data: result });    
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message });    
   }
 });
 
