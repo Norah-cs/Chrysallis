@@ -114,6 +114,18 @@ app.post("/api/genCoding", async (req, res) => {
   }
 });
 
+// Express example
+app.post("/api/check-code", async (req, res) => {
+  const { question, code } = req.body;
+  try {
+    const result = await checkUserCode(question, code);
+    res.json({ result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ result: "Error checking code" });
+  }
+});
+
 
 // Socket.io connection handling
 io.on('connection', (socket) => {

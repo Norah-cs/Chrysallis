@@ -3,6 +3,7 @@ import { Users, Clock, Code, MessageSquare, Briefcase, Search, Sparkles, Target,
 import VideoChatRoom from '../shared/VideoChatRoom';
 import { FormData } from '../../types';
 import GenerateAudio from "../shared/GenerateAudio";
+import CodingSpace from "../shared/CodingSpace";
 
 function Rooms() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -339,6 +340,12 @@ function Rooms() {
           {currentRoomId === "3" && (
             <div className="fixed bottom-[1rem] left-6 z-50">
               <GenerateAudio />
+            </div>
+          )}
+
+          {currentRoomId === "1" && (
+            <div>
+              <CodingSpace question={""} />
             </div>
           )}
           
