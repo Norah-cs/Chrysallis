@@ -40,11 +40,14 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
   useEffect(() => {
     // Initialize socket connection
     const newSocket = io('http://localhost:5000', {
-      transports: ['websocket'],
+      transports: ['polling', 'websocket'], // Try polling first, then websocket
       forceNew: true, // Force a new connection
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
+      timeout: 20000,
+      autoConnect: true,
+      upgrade: true, // Allow upgrade from polling to websocket
     });
 
     newSocket.on('connect', () => {
@@ -112,17 +115,30 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
     });
 
     newSocket.on('offer', async (data) => {
-      console.log('Received offer from:', data.userId);
+      console.log('📥 Received offer from:', data.userId);
+      console.log('📥 Offer details:', {
+        type: data.offer.type,
+        sdp: data.offer.sdp?.substring(0, 100) + '...'
+      });
       await handleOffer(data.userId, data.offer);
     });
 
     newSocket.on('answer', async (data) => {
-      console.log('Received answer from:', data.userId);
+      console.log('📥 Received answer from:', data.userId);
+      console.log('📥 Answer details:', {
+        type: data.answer.type,
+        sdp: data.answer.sdp?.substring(0, 100) + '...'
+      });
       await handleAnswer(data.userId, data.answer);
     });
 
     newSocket.on('ice-candidate', async (data) => {
-      console.log('Received ICE candidate from:', data.userId);
+      console.log('🧊 Received ICE candidate from:', data.userId);
+      console.log('🧊 ICE candidate details:', {
+        candidate: data.candidate.candidate,
+        sdpMLineIndex: data.candidate.sdpMLineIndex,
+        sdpMid: data.candidate.sdpMid
+      });
       await handleIceCandidate(data.userId, data.candidate);
     });
 
@@ -140,8 +156,23 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       setIsConnected(false);
     });
 
-    newSocket.on('connect_error', (error) => {
+    newSocket.on('connect_error', (error: any) => {
       console.error('❌ Connection error:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        description: error.description,
+        context: error.context,
+        type: error.type
+      });
+      setIsConnected(false);
+    });
+
+    newSocket.on('reconnect_attempt', (attemptNumber) => {
+      console.log(`🔄 Reconnection attempt ${attemptNumber}`);
+    });
+
+    newSocket.on('reconnect_failed', () => {
+      console.error('❌ Failed to reconnect to server');
       setIsConnected(false);
     });
 
@@ -164,11 +195,30 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
   // Handle remote streams when they change
   useEffect(() => {
+    console.log('📹 Remote streams changed:', Object.keys(remoteStreams));
     Object.entries(remoteStreams).forEach(([userId, stream]) => {
+      console.log(`📹 Processing remote stream for user ${userId}:`, {
+        streamId: stream?.id,
+        active: stream?.active,
+        trackCount: stream?.getTracks().length
+      });
+      
       const videoElement = remoteVideoRefs.current[userId];
-      if (videoElement && stream && videoElement.srcObject !== stream) {
+      if (videoElement && stream) {
         videoElement.srcObject = stream;
         console.log('📹 Remote stream updated for user:', userId);
+        
+        // Force play the video
+        videoElement.play().then(() => {
+          console.log('📹 Remote video started playing for user:', userId);
+        }).catch(err => {
+          console.error('❌ Error playing remote video for user:', userId, err);
+        });
+      } else {
+        console.log(`📹 Video element for user ${userId}:`, {
+          elementExists: !!videoElement,
+          streamExists: !!stream
+        });
       }
     });
   }, [remoteStreams]);
@@ -229,20 +279,41 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
     peerConnection.ontrack = (event) => {
       console.log('📹 Received remote stream from:', userId);
+      console.log('📹 Remote stream details:', {
+        streamId: event.streams[0]?.id,
+        trackCount: event.streams[0]?.getTracks().length,
+        videoTracks: event.streams[0]?.getVideoTracks().length,
+        audioTracks: event.streams[0]?.getAudioTracks().length
+      });
+      
       const remoteStream = event.streams[0];
       setRemoteStreams(prev => ({
         ...prev,
         [userId]: remoteStream
       }));
       
-      // Ensure the video element gets the stream
-      setTimeout(() => {
+      // Ensure the video element gets the stream with multiple attempts
+      const assignStream = (attempt = 0) => {
         const videoElement = remoteVideoRefs.current[userId];
         if (videoElement && remoteStream) {
           videoElement.srcObject = remoteStream;
           console.log('📹 Remote video stream assigned to video element');
+          
+          // Force play the video
+          videoElement.play().then(() => {
+            console.log('📹 Remote video started playing');
+          }).catch(err => {
+            console.error('❌ Error playing remote video:', err);
+          });
+        } else if (attempt < 10) {
+          console.log(`📹 Video element not ready, retrying in 200ms (attempt ${attempt + 1})`);
+          setTimeout(() => assignStream(attempt + 1), 200);
+        } else {
+          console.error('❌ Video element not available after 10 attempts');
         }
-      }, 100);
+      };
+      
+      assignStream();
     };
 
     peerConnection.onicecandidate = (event) => {
@@ -313,6 +384,10 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       await peerConnection.setLocalDescription(offer);
       
       console.log('📤 Sending offer to:', userId);
+      console.log('📤 Offer details:', {
+        type: offer.type,
+        sdp: offer.sdp?.substring(0, 100) + '...'
+      });
       socket.emit('offer', {
         targetUserId: userId,
         offer: offer
@@ -362,6 +437,10 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       await peerConnection.setLocalDescription(answer);
 
       console.log('📤 Sending answer to:', userId);
+      console.log('📤 Answer details:', {
+        type: answer.type,
+        sdp: answer.sdp?.substring(0, 100) + '...'
+      });
       socket.emit('answer', {
         targetUserId: userId,
         answer: answer
@@ -514,20 +593,27 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
                     ref={(el) => {
                       if (el) {
                         remoteVideoRefs.current[userId] = el;
-                        if (stream && el.srcObject !== stream) {
+                        // Force stream assignment
+                        if (stream) {
                           el.srcObject = stream;
                           console.log('📹 Remote video stream set for user:', userId);
+                          // Force play
+                          el.play().catch(err => console.error('❌ Error playing remote video:', err));
                         }
                       }
                     }}
                     autoPlay
                     playsInline
+                    muted={false}
                     className="w-full h-full object-cover"
                     onLoadedMetadata={() => {
                       console.log('📹 Remote video metadata loaded for user:', userId);
                     }}
                     onCanPlay={() => {
                       console.log('📹 Remote video can play for user:', userId);
+                    }}
+                    onError={(e) => {
+                      console.error('❌ Remote video error for user:', userId, e);
                     }}
                   />
                   <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">

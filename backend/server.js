@@ -139,6 +139,7 @@ io.on('connection', (socket) => {
   // WebRTC signaling
   socket.on('offer', (data) => {
     const { targetUserId, offer } = data;
+    console.log(`📤 Forwarding offer from ${socket.id} to ${targetUserId}`);
     socket.to(targetUserId).emit('offer', {
       userId: socket.id,
       offer
@@ -147,6 +148,7 @@ io.on('connection', (socket) => {
 
   socket.on('answer', (data) => {
     const { targetUserId, answer } = data;
+    console.log(`📤 Forwarding answer from ${socket.id} to ${targetUserId}`);
     socket.to(targetUserId).emit('answer', {
       userId: socket.id,
       answer
@@ -155,6 +157,7 @@ io.on('connection', (socket) => {
 
   socket.on('ice-candidate', (data) => {
     const { targetUserId, candidate } = data;
+    console.log(`🧊 Forwarding ICE candidate from ${socket.id} to ${targetUserId}`);
     socket.to(targetUserId).emit('ice-candidate', {
       userId: socket.id,
       candidate
