@@ -15,31 +15,28 @@ function Navbar() {
   return (
     <nav className="bg-white/95 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-20">
           {/* Logo/Brand */}
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <a href="/">
-                <img 
-                src="/assets/chrysallis-logo.png" 
-                alt="Chrysallis"
-                className="h-14 w-auto" />
-                </a>
+              <a href="/" className="text-2xl font-extrabold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
+              > Chrysallis
+              </a>
             </div>
           </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-1">
+            <div className="ml-10 flex items-baseline space-x-2">
               {navLinks.map((link) => {
                 const IconComponent = link.icon;
                 return (
                   <a
                     key={link.href}
                     href={link.href}
-                    className="group flex items-center px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 ease-in-out"
+                    className="group flex items-center px-4 py-3 text-base font-semibold text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 ease-in-out"
                   >
-                    <IconComponent className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
+                    <IconComponent className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform duration-200" />
                     {link.label}
                   </a>
                 );
@@ -52,7 +49,7 @@ function Navbar() {
             <button
               onClick={toggleMenu}
               className="inline-flex items-center justify-center p-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
-              aria-expanded="false"
+              aria-expanded="{isOpen}"
             >
               <span className="sr-only">Open main menu</span>
               {isOpen ? (

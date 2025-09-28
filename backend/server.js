@@ -246,4 +246,4 @@ async function connectToDB() {
   return client.db("UserData");
 }
 
-server.listen(5000, () => console.log("Server running on port 5000"));
+server.listen(3000, () => console.log("Server running on port 3000"));
