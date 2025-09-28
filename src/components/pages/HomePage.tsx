@@ -6,7 +6,7 @@ import TiltedCard from "../Logo/Logo";
 import { StoreImages } from "../LogoLoop/StoreImages";
 import { useNavigate } from 'react-router-dom';
 import CountUp from "../UIComponents/CountUp";
-import CircularGallery from "./CircularGallery/CircularGallery";
+import CircularGallery from "../CircularGallery/CircularGallery";
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
