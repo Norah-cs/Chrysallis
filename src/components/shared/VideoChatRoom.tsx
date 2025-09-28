@@ -36,6 +36,8 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
   const remoteVideoRefs = useRef<{ [key: string]: HTMLVideoElement }>({});
   const peerConnections = useRef<PeerConnection>({});
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
     // Initialize socket connection
@@ -91,14 +93,33 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
     newSocket.on('user-matched', (matchedUserData) => {
       console.log('🎉 USER MATCHED EVENT RECEIVED:', matchedUserData);
       console.log('Current socket ID:', newSocket.id);
+      console.log('Local stream status at match:', {
+        exists: !!localStreamRef.current,
+        active: localStreamRef.current?.active,
+        videoTracks: localStreamRef.current?.getVideoTracks().length || 0
+      });
       setMatchedUser(matchedUserData);
       setIsWaitingForMatch(false);
       
-      // Start WebRTC connection with the matched user (with delay to ensure local stream is ready)
-      setTimeout(() => {
-        console.log('🔗 Starting peer connection after match...');
-        initiatePeerConnection(matchedUserData.id);
-      }, 1000); // Increased delay to ensure everything is ready
+      // Wait for local stream to be ready before starting WebRTC
+      const waitForLocalStream = () => {
+        if (localStreamRef.current && localStreamRef.current.active) {
+          console.log('🔗 Local stream is ready, starting peer connection...');
+          initiatePeerConnection(matchedUserData.id);
+        } else if (!localStreamRef.current) {
+          console.log('⚠️ No local stream available...');
+          setTimeout(waitForLocalStream, 500);
+        } else if (!localStreamRef.current.active) {
+          console.log('⚠️ Local stream not active...');
+          setTimeout(waitForLocalStream, 500);
+        } else {
+          console.log('⚠️ Local stream not ready yet, waiting...');
+          setTimeout(waitForLocalStream, 500);
+        }
+      };
+      
+      // Start checking for local stream readiness
+      setTimeout(waitForLocalStream, 500);
     });
 
     newSocket.on('user-left', (userId) => {
@@ -177,14 +198,15 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
     });
 
     setSocket(newSocket);
+    socketRef.current = newSocket; // Also store in ref for immediate access
 
     // Initialize local media stream
     initializeLocalStream();
 
     return () => {
       newSocket.disconnect();
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
       }
     };
   }, [roomId]);
@@ -205,15 +227,23 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       
       const videoElement = remoteVideoRefs.current[userId];
       if (videoElement && stream) {
-        videoElement.srcObject = stream;
-        console.log('📹 Remote stream updated for user:', userId);
-        
-        // Force play the video
-        videoElement.play().then(() => {
-          console.log('📹 Remote video started playing for user:', userId);
-        }).catch(err => {
-          console.error('❌ Error playing remote video for user:', userId, err);
-        });
+        // Only update if the stream is different
+        if (videoElement.srcObject !== stream) {
+          videoElement.srcObject = stream;
+          console.log('📹 Remote stream updated for user:', userId);
+          
+          // Wait for metadata to load before playing
+          const handleLoadedMetadata = () => {
+            videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            videoElement.play().then(() => {
+              console.log('📹 Remote video started playing for user:', userId);
+            }).catch(err => {
+              console.error('❌ Error playing remote video for user:', userId, err);
+            });
+          };
+          
+          videoElement.addEventListener('loadedmetadata', handleLoadedMetadata);
+        }
       } else {
         console.log(`📹 Video element for user ${userId}:`, {
           elementExists: !!videoElement,
@@ -239,7 +269,15 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
         }
       });
       console.log('✅ Camera and microphone access granted');
+      console.log('📹 Stream details:', {
+        id: stream.id,
+        active: stream.active,
+        videoTracks: stream.getVideoTracks().length,
+        audioTracks: stream.getAudioTracks().length
+      });
+      
       setLocalStream(stream);
+      localStreamRef.current = stream; // Also store in ref for immediate access
       
       // Set up local video element
       if (localVideoRef.current) {
@@ -252,6 +290,24 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
           localVideoRef.current?.play().catch(console.error);
         };
       }
+      
+      // Verify stream is working
+      setTimeout(() => {
+        console.log('📹 Stream verification:', {
+          streamActive: stream.active,
+          videoTracks: stream.getVideoTracks().map(track => ({
+            enabled: track.enabled,
+            readyState: track.readyState,
+            muted: track.muted
+          })),
+          audioTracks: stream.getAudioTracks().map(track => ({
+            enabled: track.enabled,
+            readyState: track.readyState,
+            muted: track.muted
+          }))
+        });
+      }, 1000);
+      
     } catch (error) {
       console.error('❌ Error accessing media devices:', error);
       alert('Please allow camera and microphone access to use video chat');
@@ -267,11 +323,11 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
     });
 
     // Add local stream tracks if available
-    if (localStream) {
+    if (localStreamRef.current) {
       console.log('📹 Adding local stream tracks to peer connection');
-      localStream.getTracks().forEach(track => {
+      localStreamRef.current.getTracks().forEach(track => {
         console.log(`Adding track: ${track.kind} (enabled: ${track.enabled})`);
-        peerConnection.addTrack(track, localStream);
+        peerConnection.addTrack(track, localStreamRef.current!);
       });
     } else {
       console.log('⚠️ Local stream not available when creating peer connection');
@@ -296,15 +352,23 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       const assignStream = (attempt = 0) => {
         const videoElement = remoteVideoRefs.current[userId];
         if (videoElement && remoteStream) {
-          videoElement.srcObject = remoteStream;
-          console.log('📹 Remote video stream assigned to video element');
-          
-          // Force play the video
-          videoElement.play().then(() => {
-            console.log('📹 Remote video started playing');
-          }).catch(err => {
-            console.error('❌ Error playing remote video:', err);
-          });
+          // Only update if the stream is different
+          if (videoElement.srcObject !== remoteStream) {
+            videoElement.srcObject = remoteStream;
+            console.log('📹 Remote video stream assigned to video element');
+            
+            // Wait for metadata to load before playing
+            const handleLoadedMetadata = () => {
+              videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+              videoElement.play().then(() => {
+                console.log('📹 Remote video started playing');
+              }).catch(err => {
+                console.error('❌ Error playing remote video:', err);
+              });
+            };
+            
+            videoElement.addEventListener('loadedmetadata', handleLoadedMetadata);
+          }
         } else if (attempt < 10) {
           console.log(`📹 Video element not ready, retrying in 200ms (attempt ${attempt + 1})`);
           setTimeout(() => assignStream(attempt + 1), 200);
@@ -317,9 +381,9 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
     };
 
     peerConnection.onicecandidate = (event) => {
-      if (event.candidate && socket) {
+      if (event.candidate && socketRef.current) {
         console.log('🧊 Sending ICE candidate to:', userId);
-        socket.emit('ice-candidate', {
+        socketRef.current.emit('ice-candidate', {
           targetUserId: userId,
           candidate: event.candidate
         });
@@ -353,10 +417,16 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
   const initiatePeerConnection = async (userId: string) => {
     console.log('🔗 Initiating peer connection with:', userId);
+    console.log('🔗 Local stream status:', {
+      exists: !!localStreamRef.current,
+      active: localStreamRef.current?.active,
+      videoTracks: localStreamRef.current?.getVideoTracks().length || 0,
+      audioTracks: localStreamRef.current?.getAudioTracks().length || 0
+    });
     
     // Check if local stream is available
-    if (!localStream) {
-      console.log('⚠️ Local stream not available, waiting...');
+    if (!localStreamRef.current || !localStreamRef.current.active) {
+      console.log('⚠️ Local stream not available or not active, waiting...');
       setTimeout(() => {
         initiatePeerConnection(userId);
       }, 1000);
@@ -364,7 +434,7 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
     }
     
     // Check if socket is available
-    if (!socket) {
+    if (!socketRef.current) {
       console.log('⚠️ Socket not available, waiting...');
       setTimeout(() => {
         initiatePeerConnection(userId);
@@ -372,11 +442,13 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
       return;
     }
     
+    console.log('🔗 Creating peer connection...');
     const peerConnection = createPeerConnection(userId);
     peerConnections.current[userId] = peerConnection;
 
     try {
       // Create and send offer
+      console.log('🔗 Creating offer...');
       const offer = await peerConnection.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true
@@ -388,10 +460,11 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
         type: offer.type,
         sdp: offer.sdp?.substring(0, 100) + '...'
       });
-      socket.emit('offer', {
+      socketRef.current!.emit('offer', {
         targetUserId: userId,
         offer: offer
       });
+      console.log('✅ Offer sent successfully');
     } catch (error) {
       console.error('❌ Error creating offer:', error);
       // Retry after a delay
@@ -408,7 +481,7 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
     console.log('📥 Received offer from:', userId);
     
     // Check if local stream is available
-    if (!localStream) {
+    if (!localStreamRef.current) {
       console.log('⚠️ Local stream not available when handling offer, waiting...');
       setTimeout(() => {
         handleOffer(userId, offer);
@@ -417,7 +490,7 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
     }
     
     // Check if socket is available
-    if (!socket) {
+    if (!socketRef.current) {
       console.log('⚠️ Socket not available when handling offer, waiting...');
       setTimeout(() => {
         handleOffer(userId, offer);
@@ -441,7 +514,7 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
         type: answer.type,
         sdp: answer.sdp?.substring(0, 100) + '...'
       });
-      socket.emit('answer', {
+      socketRef.current!.emit('answer', {
         targetUserId: userId,
         answer: answer
       });
@@ -477,8 +550,8 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
   };
 
   const toggleVideo = () => {
-    if (localStream) {
-      const videoTrack = localStream.getVideoTracks()[0];
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
       if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled;
         setIsVideoEnabled(videoTrack.enabled);
@@ -487,8 +560,8 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
   };
 
   const toggleAudio = () => {
-    if (localStream) {
-      const audioTrack = localStream.getAudioTracks()[0];
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
         setIsAudioEnabled(audioTrack.enabled);
@@ -497,7 +570,7 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
   };
 
   const sendMessage = () => {
-    if (newMessage.trim() && socket) {
+    if (newMessage.trim() && socketRef.current) {
       const message: ChatMessage = {
         id: Date.now().toString(),
         sender: userData.name,
@@ -505,17 +578,17 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
         timestamp: new Date()
       };
       
-      socket.emit('chat-message', message);
+      socketRef.current.emit('chat-message', message);
       setNewMessage('');
     }
   };
 
   const handleLeave = () => {
-    if (socket) {
-      socket.emit('leave-room', roomId);
+    if (socketRef.current) {
+      socketRef.current.emit('leave-room', roomId);
     }
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
     }
     onLeave();
   };
@@ -593,12 +666,10 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
                     ref={(el) => {
                       if (el) {
                         remoteVideoRefs.current[userId] = el;
-                        // Force stream assignment
-                        if (stream) {
+                        // Only set stream if it's different
+                        if (stream && el.srcObject !== stream) {
                           el.srcObject = stream;
                           console.log('📹 Remote video stream set for user:', userId);
-                          // Force play
-                          el.play().catch(err => console.error('❌ Error playing remote video:', err));
                         }
                       }
                     }}
