@@ -101,16 +101,11 @@ io.on('connection', (socket) => {
       const waitingCount = await getWaitingUsersCount(roomId);
       console.log(`📊 Total users waiting in room ${roomId}: ${waitingCount}`);
       
-      // Try to find a match (with a small delay to ensure socket is ready)
+      // Try to match existing waiting users with this new user
       console.log(`🔍 Looking for matches...`);
       setTimeout(async () => {
-        await findMatch(userId, roomId);
-      }, 100); // Small delay to ensure socket connection is stable
-      
-      // Also try to match existing waiting users with this new user
-      setTimeout(async () => {
         await matchExistingUsers(roomId);
-      }, 200); // Slightly longer delay to ensure new user is fully processed
+      }, 100); // Small delay to ensure socket connection is stable
     } catch (error) {
       console.error('❌ Error joining room:', error);
       socket.emit('error', { message: 'Failed to join room' });
@@ -301,6 +296,11 @@ async function matchExistingUsers(roomId) {
     const users = await waitingUsers.find({ roomId, status: 'waiting' }).toArray();
     console.log(`📊 Found ${users.length} waiting users in room ${roomId}`);
     
+    // Debug: Log all users found
+    users.forEach((user, index) => {
+      console.log(`   User ${index + 1}: ${user.name} (${user.socketId}) - Status: ${user.status}`);
+    });
+    
     if (users.length < 2) {
       console.log(`❌ Not enough users to match (need at least 2)`);
       return;
@@ -345,6 +345,7 @@ async function matchExistingUsers(roomId) {
       console.log(`📡 Sending match notifications...`);
       
       // Notify user1 about user2
+      console.log(`📤 Sending match notification to ${bestUser1.name} (${bestUser1.socketId})`);
       io.to(bestUser1.socketId).emit('user-matched', {
         id: bestUser2.socketId,
         name: bestUser2.name,
@@ -356,6 +357,7 @@ async function matchExistingUsers(roomId) {
       console.log(`✅ Match notification sent to ${bestUser1.name} (${bestUser1.socketId})`);
       
       // Notify user2 about user1
+      console.log(`📤 Sending match notification to ${bestUser2.name} (${bestUser2.socketId})`);
       io.to(bestUser2.socketId).emit('user-matched', {
         id: bestUser1.socketId,
         name: bestUser1.name,
