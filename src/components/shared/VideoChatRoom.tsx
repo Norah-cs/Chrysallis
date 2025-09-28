@@ -41,7 +41,7 @@ export const VideoChatRoom: React.FC<VideoChatRoomProps> = ({ roomId, userData, 
 
   useEffect(() => {
     // Initialize socket connection
-    const newSocket = io('http://localhost:5000', {
+    const newSocket = io('http://localhost:3000', {
       transports: ['polling', 'websocket'], // Try polling first, then websocket
       forceNew: true, // Force a new connection
       reconnection: true,
