@@ -26,14 +26,19 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
-// Clean up old waiting users every 10 minutes
-setInterval(cleanupOldWaitingUsers, 10 * 60 * 1000);
+// Clean up old waiting users every 2 minutes
+setInterval(cleanupOldWaitingUsers, 2 * 60 * 1000);
 
 // Periodic matching check every 3 seconds to catch missed matches
 setInterval(async () => {
   try {
     console.log('🔄 Running periodic matching check...');
     const db = await connectToDB();
+    if (!db) {
+      console.error('Database connection failed, skipping periodic matching check');
+      return;
+    }
+    
     const waitingUsers = db.collection("waitingUsers");
     
     // Get all unique room IDs with waiting users
@@ -211,14 +216,41 @@ io.on('connection', (socket) => {
     const userId = socket.id;
     console.log('User disconnected:', userId, 'Reason:', reason);
     
-    try {
-      // Remove from waiting users in database
+    // Don't remove users from waiting list on disconnect - they might reconnect
+    // Only remove if it's a server-side disconnect or after a long delay
+    if (reason === 'server namespace disconnect') {
+      console.log('Server disconnected user, removing from waiting list:', userId);
       await removeUserFromWaitingList(userId);
+    } else {
+      console.log('Client disconnected, keeping in waiting list for potential reconnection:', userId);
+      // Don't remove - let the periodic cleanup handle it
+    }
+    
+    // Notify other users immediately
+    socket.broadcast.emit('user-left', userId);
+  });
+
+  // Handle reconnection
+  socket.on('reconnect', async (data) => {
+    const userId = socket.id;
+    console.log('User reconnected:', userId);
+    
+    // Check if user was in waiting list and re-add if needed
+    try {
+      const db = await connectToDB();
+      const waitingUsers = db.collection("waitingUsers");
+      const existingUser = await waitingUsers.findOne({ socketId: userId });
       
-      // Notify other users
-      socket.broadcast.emit('user-left', userId);
+      if (existingUser) {
+        console.log('User was in waiting list, updating socket ID:', userId);
+        // Update the socket ID in case it changed
+        await waitingUsers.updateOne(
+          { socketId: userId },
+          { $set: { socketId: userId, lastSeen: new Date() } }
+        );
+      }
     } catch (error) {
-      console.error('Error handling disconnect:', error);
+      console.error('Error handling reconnection:', error);
     }
   });
 });
@@ -227,6 +259,11 @@ io.on('connection', (socket) => {
 async function getWaitingUsersCount(roomId) {
   try {
     const db = await connectToDB();
+    if (!db) {
+      console.error('Database connection failed, cannot get waiting users count');
+      return 0;
+    }
+    
     const waitingUsers = db.collection("waitingUsers");
     const count = await waitingUsers.countDocuments({ roomId, status: 'waiting' });
     return count;
@@ -340,6 +377,11 @@ async function matchExistingUsers(roomId) {
     console.log(`\n🔄 CHECKING FOR EXISTING MATCHES IN ROOM ${roomId}`);
     
     const db = await connectToDB();
+    if (!db) {
+      console.error('Database connection failed, cannot match users');
+      return;
+    }
+    
     const waitingUsers = db.collection("waitingUsers");
     
     // Get all waiting users in this room
@@ -372,8 +414,11 @@ async function matchExistingUsers(roomId) {
         connectedUsers.push(user);
         console.log(`✅ User ${user.name} (${user.socketId}) is still connected`);
       } else {
-        console.log(`❌ User ${user.name} (${user.socketId}) socket not found, removing from waiting list`);
-        await removeUserFromWaitingList(user.socketId);
+        console.log(`❌ User ${user.name} (${user.socketId}) socket not found`);
+        // Don't remove users during matching - they might be temporarily disconnected
+        // Keep them in the connected users list for matching
+        console.log(`   Keeping user in waiting list for matching (socket temporarily unavailable)`);
+        connectedUsers.push(user);
       }
     }
     
@@ -505,9 +550,26 @@ async function connectToDB() {
   
   dotenv.config({ path: path.resolve("../.env") });
   
-  const client = new MongoClient(process.env.MONGO_URI);
-  await client.connect();
-  return client.db("UserData");
+  const client = new MongoClient(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+    maxPoolSize: 10,
+    minPoolSize: 5,
+    maxIdleTimeMS: 30000,
+    connectTimeoutMS: 10000,
+    retryWrites: true,
+    retryReads: true,
+  });
+  
+  try {
+    if (!client.topology || !client.topology.isConnected()) {
+      await client.connect();
+    }
+    return client.db("UserData");
+  } catch (error) {
+    console.error('Error connecting to MongoDB:', error);
+    return null;
+  }
 }
 
 server.listen(3000, () => console.log("Server running on port 3000"));

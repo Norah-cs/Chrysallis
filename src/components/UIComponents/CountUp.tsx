@@ -19,7 +19,7 @@ export default function CountUp({
   from = 0,
   direction = 'up',
   delay = 0,
-  duration = 2,
+  duration = 8,
   className = '',
   startWhen = true,
   separator = '',

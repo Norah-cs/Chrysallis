@@ -4,22 +4,68 @@ import { MongoClient } from "mongodb";
 
 dotenv.config({ path: path.resolve("../.env") });
 
-const client = new MongoClient(process.env.MONGO_URI);
+// In-memory storage as fallback when MongoDB is unavailable
+let inMemoryStorage = {
+  waitingUsers: new Map(),
+  matchedRooms: new Map(),
+  users: new Map()
+};
 
-// Connect to MongoDB
+let client = null;
+let useInMemory = false;
+
+// Try to create MongoDB client, fall back to in-memory if it fails
+try {
+  if (process.env.MONGO_URI) {
+    client = new MongoClient(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      minPoolSize: 5,
+      maxIdleTimeMS: 30000,
+      connectTimeoutMS: 10000,
+      retryWrites: true,
+      retryReads: true,
+    });
+  } else {
+    console.log('⚠️ No MONGO_URI found, using in-memory storage');
+    useInMemory = true;
+  }
+} catch (error) {
+  console.log('⚠️ MongoDB client creation failed, using in-memory storage:', error.message);
+  useInMemory = true;
+}
+
+// Connect to MongoDB or return in-memory storage
 async function connectToDB() {
+  if (useInMemory) {
+    return inMemoryStorage;
+  }
+  
   try {
-    await client.connect();
+    if (!client || !client.topology || !client.topology.isConnected()) {
+      await client.connect();
+    }
     return client.db("UserData");
   } catch (error) {
-    console.error('Error connecting to MongoDB:', error);
-    throw error;
+    console.error('Error connecting to MongoDB, switching to in-memory storage:', error.message);
+    useInMemory = true;
+    return inMemoryStorage;
   }
 }
 
 // Get user by email
 export async function getUserByEmail(email) {
   const db = await connectToDB();
+  if (!db) {
+    console.error('Database connection failed');
+    return null;
+  }
+  
+  if (useInMemory) {
+    return db.users.get(email) || null;
+  }
+  
   const users = db.collection("users");
   
   try {
@@ -27,13 +73,25 @@ export async function getUserByEmail(email) {
     return user;
   } catch (error) {
     console.error('Error fetching user by email:', error);
-    throw error;
+    return null;
   }
 }
 
 // Get users waiting in a specific room
 export async function getWaitingUsersInRoom(roomId) {
   const db = await connectToDB();
+  if (!db) {
+    console.error('Database connection failed');
+    return [];
+  }
+  
+  if (useInMemory) {
+    const users = Array.from(db.waitingUsers.values()).filter(user => 
+      user.roomId === roomId && user.status === 'waiting'
+    );
+    return users;
+  }
+  
   const waitingUsers = db.collection("waitingUsers");
   
   try {
@@ -44,18 +102,50 @@ export async function getWaitingUsersInRoom(roomId) {
     return users;
   } catch (error) {
     console.error('Error fetching waiting users:', error);
-    throw error;
+    return [];
   }
 }
 
 // Add user to waiting list
 export async function addUserToWaitingList(userData) {
   const db = await connectToDB();
+  if (!db) {
+    console.error('Database connection failed, cannot add user to waiting list');
+    return null;
+  }
+  
+  console.log(`📝 Adding user to waiting list: ${userData.name} (${userData.socketId})`);
+  
+  if (useInMemory) {
+    // Remove user if already waiting (in case of reconnection)
+    if (db.waitingUsers.has(userData.socketId)) {
+      console.log(`🗑️ Removed existing waiting user: ${userData.socketId}`);
+    }
+    
+    // Add user to waiting list
+    const userWithStatus = {
+      ...userData,
+      status: 'waiting',
+      joinedAt: new Date()
+    };
+    
+    db.waitingUsers.set(userData.socketId, userWithStatus);
+    console.log(`✅ User added to waiting list (in-memory)`);
+    
+    // Verify the user was added
+    const verifyUser = db.waitingUsers.get(userData.socketId);
+    if (verifyUser) {
+      console.log(`✅ Verification: User found in waiting list`);
+    } else {
+      console.log(`❌ Verification failed: User not found in waiting list`);
+    }
+    
+    return { insertedId: userData.socketId };
+  }
+  
   const waitingUsers = db.collection("waitingUsers");
   
   try {
-    console.log(`📝 Adding user to waiting list: ${userData.name} (${userData.socketId})`);
-    
     // Remove user if already waiting (in case of reconnection)
     const deleteResult = await waitingUsers.deleteOne({ socketId: userData.socketId });
     if (deleteResult.deletedCount > 0) {
@@ -82,13 +172,27 @@ export async function addUserToWaitingList(userData) {
     return result;
   } catch (error) {
     console.error('❌ Error adding user to waiting list:', error);
-    throw error;
+    return null;
   }
 }
 
 // Remove user from waiting list
 export async function removeUserFromWaitingList(socketId) {
   const db = await connectToDB();
+  if (!db) {
+    console.error('Database connection failed, cannot remove user from waiting list');
+    return null;
+  }
+  
+  if (useInMemory) {
+    const existed = db.waitingUsers.has(socketId);
+    if (existed) {
+      db.waitingUsers.delete(socketId);
+      console.log(`🗑️ Removed user from waiting list (in-memory): ${socketId}`);
+    }
+    return { deletedCount: existed ? 1 : 0 };
+  }
+  
   const waitingUsers = db.collection("waitingUsers");
   
   try {
@@ -96,13 +200,18 @@ export async function removeUserFromWaitingList(socketId) {
     return result;
   } catch (error) {
     console.error('Error removing user from waiting list:', error);
-    throw error;
+    return null;
   }
 }
 
 // Create a matched room
 export async function createMatchedRoom(user1Data, user2Data) {
   const db = await connectToDB();
+  if (!db) {
+    console.error('Database connection failed, cannot create matched room');
+    return null;
+  }
+  
   const matchedRooms = db.collection("matchedRooms");
   
   try {
@@ -118,13 +227,18 @@ export async function createMatchedRoom(user1Data, user2Data) {
     return result;
   } catch (error) {
     console.error('Error creating matched room:', error);
-    throw error;
+    return null;
   }
 }
 
 // Remove matched room
 export async function removeMatchedRoom(roomId) {
   const db = await connectToDB();
+  if (!db) {
+    console.error('Database connection failed, cannot remove matched room');
+    return null;
+  }
+  
   const matchedRooms = db.collection("matchedRooms");
   
   try {
@@ -132,13 +246,27 @@ export async function removeMatchedRoom(roomId) {
     return result;
   } catch (error) {
     console.error('Error removing matched room:', error);
-    throw error;
+    return null;
   }
 }
 
 // Get all users for matching (excluding current user)
 export async function getPotentialMatches(currentUser, roomId) {
   const db = await connectToDB();
+  if (!db) {
+    console.error('Database connection failed, cannot get potential matches');
+    return [];
+  }
+  
+  if (useInMemory) {
+    const users = Array.from(db.waitingUsers.values()).filter(user => 
+      user.roomId === roomId && 
+      user.status === 'waiting' && 
+      user.socketId !== currentUser.socketId
+    );
+    return users;
+  }
+  
   const waitingUsers = db.collection("waitingUsers");
   
   try {
@@ -151,7 +279,7 @@ export async function getPotentialMatches(currentUser, roomId) {
     return potentialMatches;
   } catch (error) {
     console.error('Error fetching potential matches:', error);
-    throw error;
+    return [];
   }
 }
 
@@ -237,19 +365,39 @@ export async function findBestMatch(currentUser, roomId) {
 // Clean up old waiting users (for maintenance)
 export async function cleanupOldWaitingUsers() {
   const db = await connectToDB();
+  if (!db) {
+    console.error('Database connection failed, cannot cleanup old waiting users');
+    return null;
+  }
+  
+  if (useInMemory) {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    let deletedCount = 0;
+    
+    for (const [socketId, user] of db.waitingUsers.entries()) {
+      if (user.joinedAt < fiveMinutesAgo) {
+        db.waitingUsers.delete(socketId);
+        deletedCount++;
+      }
+    }
+    
+    console.log(`Cleaned up ${deletedCount} old waiting users (in-memory)`);
+    return { deletedCount };
+  }
+  
   const waitingUsers = db.collection("waitingUsers");
   
   try {
-    // Remove users who have been waiting for more than 30 minutes
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    // Remove users who have been waiting for more than 5 minutes
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     const result = await waitingUsers.deleteMany({
-      joinedAt: { $lt: thirtyMinutesAgo }
+      joinedAt: { $lt: fiveMinutesAgo }
     });
     
     console.log(`Cleaned up ${result.deletedCount} old waiting users`);
     return result;
   } catch (error) {
     console.error('Error cleaning up old waiting users:', error);
-    throw error;
+    return null;
   }
 }

@@ -38,7 +38,7 @@ export const HomePage: React.FC = () => {
       <div className="absolute inset-0 overflow-visible">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-250 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse animation-delay-2000"></div>
-        <div className="absolute top-40 left-1/2 transform -translate-x-1/2 w-60 h-60 bg-yellow-200 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-pulse animation-delay-4000"></div>
+        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-60 h-60 bg-yellow-200 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-pulse animation-delay-4000"></div>
       </div>
 
     <div className="relative z-10 w-full px-6 py-12">
@@ -46,7 +46,7 @@ export const HomePage: React.FC = () => {
       <header className="text-center mb-16">
         <div className="inline-flex items-center justify-center w-32 h-32 mb-8">
             <TiltedCard
-                imageSrc="/assets/chrysallis-logo.png" // put your butterfly image path here
+                imageSrc="/assets/chrysallis-logo.png"
                 altText="Butterfly"
                 containerHeight="128px"
                 containerWidth="128px"
@@ -105,7 +105,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20 mb-16">
+      <section className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20 mb-0">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
           <div>
             <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
@@ -136,7 +136,7 @@ export const HomePage: React.FC = () => {
             <div className="text-gray-600 font-medium">Universities Reached</div>
           </div>
           <div>
-            <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+            <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-1">
               <CountUp
                 from={0}
                 to={95}
@@ -152,6 +152,21 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
       
+      {/* Circular Gallery Section 
+      <div style={{ height: '650px', position: 'relative', paddingTop: '1rem'}}>
+        <CircularGallery bend={0} textColor="#ffffff" borderRadius={0.05} scrollEase={0.02}/>
+        <canvas width="1376" height="700" ></canvas>
+      </div>*/}
+      <div style={{ position: 'relative', height: '600px' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+          <CircularGallery
+            bend={0}
+            textColor="#fdffe7ff"
+            borderRadius={0.05}
+            scrollEase={0.02}
+          />
+        </div>
+      </div>
 
         {/* CTA Section */}
         <section className="text-center">
