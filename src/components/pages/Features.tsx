@@ -76,8 +76,8 @@ function Features() {
                 key={index}
                 className="bg-white rounded-xl shadow-sm p-8 hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-blue-200 group"
               >
-                <div className="flex items-center justify-center w-14 h-14 bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl mb-6 group-hover:scale-110 transition-transform duration-200">
-                  <IconComponent className="w-7 h-7 text-blue-600" />
+                <div className="flex items-center justify-center w-14 h-14 bg-gradient-to-r from-purple-200 via-support1 to-primary rounded-xl mb-6 group-hover:scale-110 transition-transform duration-200">
+                  <IconComponent className="w-7 h-7 text-white-600" />
                 </div>
                 
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
@@ -98,7 +98,7 @@ function Features() {
       </section>
 
       {/* Additional Features */}
-      <section className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-12">
+      <section className="bg-gradient-to-r from-purple-100 via-support1 to-primary rounded-2xl p-12">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">And Much More</h2>
           <p className="text-lg text-gray-600">
@@ -112,29 +112,13 @@ function Features() {
             return (
               <div key={index} className="text-center">
                 <div className="flex items-center justify-center w-12 h-12 bg-white rounded-xl shadow-sm mb-4 mx-auto">
-                  <IconComponent className="w-6 h-6 text-blue-600" />
+                  <IconComponent className="w-6 h-6 text-white-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
                 <p className="text-gray-600 text-sm">{feature.description}</p>
               </div>
             );
           })}
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-12 text-center text-white">
-        <h2 className="text-3xl font-bold mb-4">Ready to Experience These Features?</h2>
-        <p className="text-xl mb-8 opacity-90">
-          Join thousands of students who are already benefiting from our comprehensive platform
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200">
-            Start Free Trial
-          </button>
-          <button className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-all duration-200">
-            View Pricing
-          </button>
         </div>
       </section>
     </div>

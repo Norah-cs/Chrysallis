@@ -19,7 +19,7 @@ function Navbar() {
           {/* Logo/Brand */}
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <a href="/" className="text-2xl font-extrabold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
+              <a href="/" className="text-2xl font-extrabold bg-gradient-to-r from-primary to-support1 bg-clip-text text-transparent"
               > Chrysallis
               </a>
             </div>

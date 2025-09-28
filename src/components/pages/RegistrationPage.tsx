@@ -218,7 +218,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
         </button>
 
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-4xl font-extrabold bg-gradient-to-r from-purple-600 via-primary to-support1 bg-clip-text text-transparent mb-2">
             Chrysallis Registration
           </h1>
           <p className="text-gray-600 text-lg">
@@ -345,7 +345,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
                   onClick={() => addPracticeGoal(goal.id)}
                   className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all duration-200 ease-in-out font-medium
                     ${formData.practiceGoals.includes(goal.id)
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-500 shadow-lg transform scale-105'
+                      ? 'bg-gradient-to-r from-purple-500 to-support1 text-white border-purple-500 shadow-lg transform scale-105'
                       : 'bg-white text-gray-800 border-gray-300 hover:border-purple-300 hover:bg-purple-50 hover:shadow-md'
                     }`}
                 >
@@ -540,7 +540,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({ onBack }) =>
               className={`w-full py-4 px-6 rounded-xl text-lg font-semibold transition-all duration-300 transform
                 ${submitted 
                   ? 'bg-gray-400 cursor-not-allowed text-gray-600' 
-                  : 'bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-700 hover:via-pink-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95'
+                  : 'bg-gradient-to-r from-purple-600 via-primary to-support1 hover:from-indigo-300 hover:via-pink-300 hover:to-purple-300 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95'
                 }
               `}
             >

@@ -11,10 +11,12 @@ export const Footer: React.FC = () => {
           {/* Brand Section */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center mb-4">
-              <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mr-3">
-                <span className="text-white text-lg">🦋</span>
-              </div>
-              <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <img
+                src="/assets/chrysallis-logo.png"
+                alt="Chrysallis Logo"
+                className="w-10 h-10 mr-3"
+              />
+              <h3 className="text-xl font-bold bg-gradient-to-r from-primary to-support1 bg-clip-text text-transparent">
                 Chrysallis
               </h3>
             </div>

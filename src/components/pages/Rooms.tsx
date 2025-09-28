@@ -164,7 +164,7 @@ function Rooms() {
       <div className="text-center py-8">
         <div className="flex items-center justify-center mb-4">
           <span className="text-4xl mr-3">🦋</span>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-support1 bg-clip-text text-transparent">
             Practice Rooms
           </h1>
         </div>
@@ -187,7 +187,7 @@ function Rooms() {
               onClick={() => setSelectedCategory(category.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-200 ${
                 isActive
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-purple-600 to-support1 text-white shadow-lg'
                   : 'bg-white text-gray-600 hover:bg-purple-50 hover:text-purple-600 border border-gray-200'
               }`}
             >
@@ -304,7 +304,7 @@ function Rooms() {
           <div className="text-6xl mb-4">🦋</div>
           <h3 className="text-xl font-semibold text-gray-600 mb-2">No practice rooms found</h3>
           <p className="text-gray-500 mb-6">Try adjusting your search or create a new practice room</p>
-          <button className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200">
+          <button className="bg-gradient-to-r from-purple-600 to-support1 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200">
             Create Your First Room
           </button>
         </div>
@@ -319,7 +319,7 @@ function Rooms() {
           Every session is a step closer to your dream career.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200">
+          <button className="bg-gradient-to-r from-purple-600 to-support1 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200">
             Start Practicing Today
           </button>
           <button className="border-2 border-purple-300 text-purple-700 px-8 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all duration-200">
