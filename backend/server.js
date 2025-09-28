@@ -29,6 +29,28 @@ app.use(express.json());
 // Clean up old waiting users every 10 minutes
 setInterval(cleanupOldWaitingUsers, 10 * 60 * 1000);
 
+// Periodic matching check every 3 seconds to catch missed matches
+setInterval(async () => {
+  try {
+    console.log('🔄 Running periodic matching check...');
+    const db = await connectToDB();
+    const waitingUsers = db.collection("waitingUsers");
+    
+    // Get all unique room IDs with waiting users
+    const rooms = await waitingUsers.distinct("roomId", { status: 'waiting' });
+    
+    for (const roomId of rooms) {
+      const usersInRoom = await waitingUsers.find({ roomId, status: 'waiting' }).toArray();
+      if (usersInRoom.length >= 2) {
+        console.log(`🔄 Found ${usersInRoom.length} waiting users in room ${roomId}, attempting match...`);
+        await matchExistingUsers(roomId);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error in periodic matching check:', error);
+  }
+}, 3000);
+
 // Register new user
 app.post("/api/register", async (req, res) => {
   try {
@@ -121,7 +143,7 @@ io.on('connection', (socket) => {
       setTimeout(async () => {
         console.log(`🔍 Attempting to match users in room ${roomId}...`);
         await matchExistingUsers(roomId);
-      }, 100); // Small delay to ensure socket connection is stable
+      }, 1000); // Delay to ensure socket connection is stable
     } catch (error) {
       console.error('❌ Error joining room:', error);
       socket.emit('error', { message: 'Failed to join room' });
@@ -254,30 +276,42 @@ async function findMatch(userId, roomId) {
     await removeUserFromWaitingList(bestMatch.socketId);
     console.log(`✅ Both users removed from waiting list`);
     
-    // Notify both users about the match
+    // Notify both users about the match with verification
     console.log(`📡 Sending match notifications...`);
     
-    // Send match notification to current user (the one who just joined)
-    io.to(userId).emit('user-matched', {
-      id: bestMatch.socketId,
-      name: bestMatch.name,
-      techInterest: bestMatch.techInterest,
-      practiceGoals: bestMatch.practiceGoals,
-      university: bestMatch.university,
-      year: bestMatch.year
-    });
-    console.log(`✅ Match notification sent to ${currentUser.name} (${userId})`);
+    // Verify both sockets are still connected before sending notifications
+    const currentUserSocket = io.sockets.sockets.get(userId);
+    const matchedUserSocket = io.sockets.sockets.get(bestMatch.socketId);
     
-    // Send match notification to the matched user
-    io.to(bestMatch.socketId).emit('user-matched', {
-      id: userId,
-      name: currentUser.name,
-      techInterest: currentUser.techInterest,
-      practiceGoals: currentUser.practiceGoals,
-      university: currentUser.university,
-      year: currentUser.year
-    });
-    console.log(`✅ Match notification sent to ${bestMatch.name} (${bestMatch.socketId})`);
+    if (currentUserSocket && currentUserSocket.connected) {
+      console.log(`📤 Sending match notification to ${currentUser.name} (${userId})`);
+      currentUserSocket.emit('user-matched', {
+        id: bestMatch.socketId,
+        name: bestMatch.name,
+        techInterest: bestMatch.techInterest,
+        practiceGoals: bestMatch.practiceGoals,
+        university: bestMatch.university,
+        year: bestMatch.year
+      });
+      console.log(`✅ Match notification sent to ${currentUser.name} (${userId})`);
+    } else {
+      console.log(`❌ Cannot send match notification to ${currentUser.name} - socket not connected`);
+    }
+    
+    if (matchedUserSocket && matchedUserSocket.connected) {
+      console.log(`📤 Sending match notification to ${bestMatch.name} (${bestMatch.socketId})`);
+      matchedUserSocket.emit('user-matched', {
+        id: userId,
+        name: currentUser.name,
+        techInterest: currentUser.techInterest,
+        practiceGoals: currentUser.practiceGoals,
+        university: currentUser.university,
+        year: currentUser.year
+      });
+      console.log(`✅ Match notification sent to ${bestMatch.name} (${bestMatch.socketId})`);
+    } else {
+      console.log(`❌ Cannot send match notification to ${bestMatch.name} - socket not connected`);
+    }
     
     console.log(`✅ Match notifications sent to both users`);
     
@@ -331,6 +365,8 @@ async function matchExistingUsers(roomId) {
         console.log(`✅ User ${user.name} (${user.socketId}) is still connected`);
       } else {
         console.log(`❌ User ${user.name} (${user.socketId}) is not connected, removing from waiting list`);
+        console.log(`   Socket exists: ${!!socket}`);
+        console.log(`   Socket connected: ${socket?.connected}`);
         await removeUserFromWaitingList(user.socketId);
       }
     }
@@ -375,32 +411,42 @@ async function matchExistingUsers(roomId) {
       await removeUserFromWaitingList(bestUser2.socketId);
       console.log(`✅ Both users removed from waiting list`);
       
-      // Notify both users
+      // Notify both users with verification
       console.log(`📡 Sending match notifications...`);
       
-      // Notify user1 about user2
-      console.log(`📤 Sending match notification to ${bestUser1.name} (${bestUser1.socketId})`);
-      io.to(bestUser1.socketId).emit('user-matched', {
-        id: bestUser2.socketId,
-        name: bestUser2.name,
-        techInterest: bestUser2.techInterest,
-        practiceGoals: bestUser2.practiceGoals,
-        university: bestUser2.university,
-        year: bestUser2.year
-      });
-      console.log(`✅ Match notification sent to ${bestUser1.name} (${bestUser1.socketId})`);
+      // Verify both sockets are still connected before sending notifications
+      const socket1 = io.sockets.sockets.get(bestUser1.socketId);
+      const socket2 = io.sockets.sockets.get(bestUser2.socketId);
       
-      // Notify user2 about user1
-      console.log(`📤 Sending match notification to ${bestUser2.name} (${bestUser2.socketId})`);
-      io.to(bestUser2.socketId).emit('user-matched', {
-        id: bestUser1.socketId,
-        name: bestUser1.name,
-        techInterest: bestUser1.techInterest,
-        practiceGoals: bestUser1.practiceGoals,
-        university: bestUser1.university,
-        year: bestUser1.year
-      });
-      console.log(`✅ Match notification sent to ${bestUser2.name} (${bestUser2.socketId})`);
+      if (socket1 && socket1.connected) {
+        console.log(`📤 Sending match notification to ${bestUser1.name} (${bestUser1.socketId})`);
+        socket1.emit('user-matched', {
+          id: bestUser2.socketId,
+          name: bestUser2.name,
+          techInterest: bestUser2.techInterest,
+          practiceGoals: bestUser2.practiceGoals,
+          university: bestUser2.university,
+          year: bestUser2.year
+        });
+        console.log(`✅ Match notification sent to ${bestUser1.name} (${bestUser1.socketId})`);
+      } else {
+        console.log(`❌ Cannot send match notification to ${bestUser1.name} - socket not connected`);
+      }
+      
+      if (socket2 && socket2.connected) {
+        console.log(`📤 Sending match notification to ${bestUser2.name} (${bestUser2.socketId})`);
+        socket2.emit('user-matched', {
+          id: bestUser1.socketId,
+          name: bestUser1.name,
+          techInterest: bestUser1.techInterest,
+          practiceGoals: bestUser1.practiceGoals,
+          university: bestUser1.university,
+          year: bestUser1.year
+        });
+        console.log(`✅ Match notification sent to ${bestUser2.name} (${bestUser2.socketId})`);
+      } else {
+        console.log(`❌ Cannot send match notification to ${bestUser2.name} - socket not connected`);
+      }
       
       console.log(`✅ Match notifications sent to both users`);
     } else {
