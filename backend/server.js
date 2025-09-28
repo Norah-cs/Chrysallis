@@ -76,7 +76,12 @@ io.on('connection', (socket) => {
     const { roomId, userData } = data;
     const userId = socket.id;
     
-    console.log(`User ${userData.name} joining room ${roomId}`);
+    console.log(`\n=== USER JOINING ROOM ===`);
+    console.log(`User: ${userData.name} (${userData.email})`);
+    console.log(`Socket ID: ${userId}`);
+    console.log(`Room ID: ${roomId}`);
+    console.log(`Tech Interest: ${userData.techInterest}`);
+    console.log(`Practice Goals: ${userData.practiceGoals}`);
     
     try {
       // Store user data in MongoDB
@@ -87,13 +92,27 @@ io.on('connection', (socket) => {
         joinedAt: new Date()
       };
 
+      console.log(`Adding user to waiting list...`);
       // Add to waiting users in database
       await addUserToWaitingList(userInfo);
+      console.log(`✅ User added to waiting list successfully`);
       
-      // Try to find a match
-      await findMatch(userId, roomId);
+      // Check how many users are waiting in this room
+      const waitingCount = await getWaitingUsersCount(roomId);
+      console.log(`📊 Total users waiting in room ${roomId}: ${waitingCount}`);
+      
+      // Try to find a match (with a small delay to ensure socket is ready)
+      console.log(`🔍 Looking for matches...`);
+      setTimeout(async () => {
+        await findMatch(userId, roomId);
+      }, 100); // Small delay to ensure socket connection is stable
+      
+      // Also try to match existing waiting users with this new user
+      setTimeout(async () => {
+        await matchExistingUsers(roomId);
+      }, 200); // Slightly longer delay to ensure new user is fully processed
     } catch (error) {
-      console.error('Error joining room:', error);
+      console.error('❌ Error joining room:', error);
       socket.emit('error', { message: 'Failed to join room' });
     }
   });
@@ -120,6 +139,7 @@ io.on('connection', (socket) => {
   // WebRTC signaling
   socket.on('offer', (data) => {
     const { targetUserId, offer } = data;
+    console.log(`📤 Forwarding offer from ${socket.id} to ${targetUserId}`);
     socket.to(targetUserId).emit('offer', {
       userId: socket.id,
       offer
@@ -128,6 +148,7 @@ io.on('connection', (socket) => {
 
   socket.on('answer', (data) => {
     const { targetUserId, answer } = data;
+    console.log(`📤 Forwarding answer from ${socket.id} to ${targetUserId}`);
     socket.to(targetUserId).emit('answer', {
       userId: socket.id,
       answer
@@ -136,6 +157,7 @@ io.on('connection', (socket) => {
 
   socket.on('ice-candidate', (data) => {
     const { targetUserId, candidate } = data;
+    console.log(`🧊 Forwarding ICE candidate from ${socket.id} to ${targetUserId}`);
     socket.to(targetUserId).emit('ice-candidate', {
       userId: socket.id,
       candidate
@@ -168,34 +190,63 @@ io.on('connection', (socket) => {
   });
 });
 
+// Helper function to get waiting users count
+async function getWaitingUsersCount(roomId) {
+  try {
+    const db = await connectToDB();
+    const waitingUsers = db.collection("waitingUsers");
+    const count = await waitingUsers.countDocuments({ roomId, status: 'waiting' });
+    return count;
+  } catch (error) {
+    console.error('Error getting waiting users count:', error);
+    return 0;
+  }
+}
+
 // Matching algorithm using MongoDB data
 async function findMatch(userId, roomId) {
   try {
+    console.log(`\n🔍 FINDING MATCH FOR USER ${userId} IN ROOM ${roomId}`);
+    
     // Get current user from database
     const currentUser = await getUserFromWaitingList(userId);
     if (!currentUser) {
-      console.log(`User ${userId} not found in waiting list`);
+      console.log(`❌ User ${userId} not found in waiting list`);
       return;
     }
+
+    console.log(`✅ Current user found: ${currentUser.name}`);
 
     // Find best match using database
     const bestMatch = await findBestMatch(currentUser, roomId);
     
     if (!bestMatch) {
-      console.log(`No matches found for user ${currentUser.name} in room ${roomId}`);
+      console.log(`❌ No matches found for user ${currentUser.name} in room ${roomId}`);
+      console.log(`💡 This could mean:`);
+      console.log(`   - No other users in the same room`);
+      console.log(`   - No compatible users (compatibility score too low)`);
+      console.log(`   - All other users already matched`);
       return;
     }
 
-    console.log(`Matching ${currentUser.name} with ${bestMatch.name} (score: ${bestMatch.score})`);
+    console.log(`🎉 MATCH FOUND!`);
+    console.log(`   ${currentUser.name} ↔ ${bestMatch.name}`);
+    console.log(`   Compatibility Score: ${bestMatch.score}`);
+    console.log(`   Tech Interest Match: ${currentUser.techInterest} === ${bestMatch.techInterest}`);
     
     // Create a matched room in database
     await createMatchedRoom(currentUser, bestMatch);
+    console.log(`✅ Matched room created in database`);
     
     // Remove both users from waiting list
     await removeUserFromWaitingList(userId);
     await removeUserFromWaitingList(bestMatch.socketId);
+    console.log(`✅ Both users removed from waiting list`);
     
     // Notify both users about the match
+    console.log(`📡 Sending match notifications...`);
+    
+    // Send match notification to current user (the one who just joined)
     io.to(userId).emit('user-matched', {
       id: bestMatch.socketId,
       name: bestMatch.name,
@@ -204,7 +255,9 @@ async function findMatch(userId, roomId) {
       university: bestMatch.university,
       year: bestMatch.year
     });
+    console.log(`✅ Match notification sent to ${currentUser.name} (${userId})`);
     
+    // Send match notification to the matched user
     io.to(bestMatch.socketId).emit('user-matched', {
       id: userId,
       name: currentUser.name,
@@ -213,9 +266,12 @@ async function findMatch(userId, roomId) {
       university: currentUser.university,
       year: currentUser.year
     });
+    console.log(`✅ Match notification sent to ${bestMatch.name} (${bestMatch.socketId})`);
+    
+    console.log(`✅ Match notifications sent to both users`);
     
   } catch (error) {
-    console.error('Error in findMatch:', error);
+    console.error('❌ Error in findMatch:', error);
   }
 }
 
@@ -231,6 +287,121 @@ async function getUserFromWaitingList(socketId) {
     console.error('Error fetching user from waiting list:', error);
     return null;
   }
+}
+
+// Function to match existing waiting users when a new user joins
+async function matchExistingUsers(roomId) {
+  try {
+    console.log(`\n🔄 CHECKING FOR EXISTING MATCHES IN ROOM ${roomId}`);
+    
+    const db = await connectToDB();
+    const waitingUsers = db.collection("waitingUsers");
+    
+    // Get all waiting users in this room
+    const users = await waitingUsers.find({ roomId, status: 'waiting' }).toArray();
+    console.log(`📊 Found ${users.length} waiting users in room ${roomId}`);
+    
+    if (users.length < 2) {
+      console.log(`❌ Not enough users to match (need at least 2)`);
+      return;
+    }
+    
+    // Try to find the best match among all waiting users
+    let bestMatch = null;
+    let bestScore = 0;
+    let bestUser1 = null;
+    let bestUser2 = null;
+    
+    for (let i = 0; i < users.length; i++) {
+      for (let j = i + 1; j < users.length; j++) {
+        const user1 = users[i];
+        const user2 = users[j];
+        
+        // Calculate compatibility score
+        const score = calculateCompatibilityScore(user1, user2);
+        console.log(`   ${user1.name} ↔ ${user2.name}: ${score} points`);
+        
+        if (score > bestScore && score > 20) { // Minimum compatibility threshold
+          bestScore = score;
+          bestUser1 = user1;
+          bestUser2 = user2;
+        }
+      }
+    }
+    
+    if (bestUser1 && bestUser2) {
+      console.log(`🏆 Best match found: ${bestUser1.name} ↔ ${bestUser2.name} (${bestScore} points)`);
+      
+      // Create matched room
+      await createMatchedRoom(bestUser1, bestUser2);
+      console.log(`✅ Matched room created in database`);
+      
+      // Remove both users from waiting list
+      await removeUserFromWaitingList(bestUser1.socketId);
+      await removeUserFromWaitingList(bestUser2.socketId);
+      console.log(`✅ Both users removed from waiting list`);
+      
+      // Notify both users
+      console.log(`📡 Sending match notifications...`);
+      
+      // Notify user1 about user2
+      io.to(bestUser1.socketId).emit('user-matched', {
+        id: bestUser2.socketId,
+        name: bestUser2.name,
+        techInterest: bestUser2.techInterest,
+        practiceGoals: bestUser2.practiceGoals,
+        university: bestUser2.university,
+        year: bestUser2.year
+      });
+      console.log(`✅ Match notification sent to ${bestUser1.name} (${bestUser1.socketId})`);
+      
+      // Notify user2 about user1
+      io.to(bestUser2.socketId).emit('user-matched', {
+        id: bestUser1.socketId,
+        name: bestUser1.name,
+        techInterest: bestUser1.techInterest,
+        practiceGoals: bestUser1.practiceGoals,
+        university: bestUser1.university,
+        year: bestUser1.year
+      });
+      console.log(`✅ Match notification sent to ${bestUser2.name} (${bestUser2.socketId})`);
+      
+      console.log(`✅ Match notifications sent to both users`);
+    } else {
+      console.log(`❌ No compatible matches found among existing users`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error in matchExistingUsers:', error);
+  }
+}
+
+// Helper function to calculate compatibility score
+function calculateCompatibilityScore(user1, user2) {
+  let score = 0;
+  
+  // Tech interest match (40 points)
+  if (user1.techInterest === user2.techInterest) {
+    score += 40;
+  }
+  
+  // Practice goals overlap (30 points max)
+  const goals1 = user1.practiceGoals || [];
+  const goals2 = user2.practiceGoals || [];
+  const commonGoals = goals1.filter(goal => goals2.includes(goal));
+  score += commonGoals.length * 10;
+  
+  // University match (20 points)
+  if (user1.university === user2.university) {
+    score += 20;
+  }
+  
+  // Year match (10 points)
+  if (user1.year === user2.year) {
+    score += 10;
+  }
+  
+  return score;
 }
 
 // Helper function to connect to database

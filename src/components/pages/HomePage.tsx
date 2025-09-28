@@ -4,6 +4,7 @@ import LogoLoop from "../LogoLoop/LogoLoop";
 import TiltedCard from "../Logo/Logo";
 import { StoreImages } from "../LogoLoop/StoreImages";
 import { useNavigate } from 'react-router-dom';
+import CountUp from "../UIComponents/CountUp";
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -110,7 +111,60 @@ export const HomePage: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {/* Stats Section */}
+      <section className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+          <div>
+            <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+              <CountUp
+                from={0}
+                to={367}
+                separator=","
+                direction="up"
+                duration={1}
+                className="count-up-text"
+              />
+              <span>+</span>
+            </div>
+            <div className="text-gray-600 font-medium">Students Transformed</div>
+          </div>
+          <div>
+            <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+              <CountUp
+                from={0}
+                to={22}
+                separator=","
+                direction="up"
+                duration={1}
+                className="count-up-text"
+              />
+              <span>+</span>
+            </div>
+            <div className="text-gray-600 font-medium">Universities Reached</div>
+          </div>
+          <div>
+            <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+              <CountUp
+                from={0}
+                to={95}
+                separator="%"
+                direction="up"
+                duration={1}
+                className="count-up-text"
+              />
+              <span>%</span>
+            </div>
+            <div className="text-gray-600 font-medium">Success Rate</div>
+          </div>
+        </div>
+      </section>
+      
+        {/* Features Grid */}
+        <section className="mb-16">
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
+            The wings of your future are built in practice.
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
               <div
                 key={index}
