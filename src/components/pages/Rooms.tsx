@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Users, Clock, Code, MessageSquare, Briefcase, Search, Sparkles, Target, TrendingUp } from "lucide-react";
+import { Users, Clock, Code, MessageSquare, Briefcase, Search, Sparkles, Target, TrendingUp, Timer } from "lucide-react";
 import VideoChatRoom from '../shared/VideoChatRoom';
 import { FormData } from '../../types';
+import ElevatorPitchTimer from '../shared/ElevatorPitchTimer';
 
 function Rooms() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -9,6 +10,7 @@ function Rooms() {
   const [isInVideoChat, setIsInVideoChat] = useState(false);
   const [currentRoomId, setCurrentRoomId] = useState("");
   const [userData, setUserData] = useState<FormData | null>(null);
+  const [isTimerOpen, setIsTimerOpen] = useState(false);
 
   // Load user data from localStorage
   useEffect(() => {
@@ -148,6 +150,11 @@ function Rooms() {
     setCurrentRoomId("");
   };
 
+// Function to check if room is Elevator Pitch Practice
+  const isElevatorPitchRoom = (roomName: string) => {
+    return roomName === "Elevator Pitch Practice";
+  };
+
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -275,6 +282,19 @@ function Rooms() {
                 </div>
               </div>
 
+              {/* Elevator Pitch Timer Button - Only shows for Elevator Pitch room */}
+              {isElevatorPitchRoom(room.name) && (
+                <div className="mb-4">
+                  <button
+                    onClick={() => setIsTimerOpen(true)}
+                    className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2 text-sm"
+                  >
+                    <Timer className="w-4 h-4" />
+                    Open Practice Timer
+                  </button>
+                </div>
+              )}
+
               {/* Join Button */}
               <button 
                 onClick={() => handleJoinRoom(room.id.toString())}
@@ -317,6 +337,12 @@ function Rooms() {
           </button>
         </div>
       </div>
+
+      {/* Timer Modal - Only renders when open */}
+      <ElevatorPitchTimer 
+        isOpen={isTimerOpen}
+        onClose={() => setIsTimerOpen(false)}
+      />
 
       {/* Video Chat Room */}
       {isInVideoChat && userData && (
